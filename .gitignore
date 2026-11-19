@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node / web
+node_modules/
+web/dist/
+web/coverage/
+web/test-results/
+web/playwright-report/
+web/.vite/
+
+# Local tooling and scratch space (never committed)
+.tools/
+.tmp/
+.pytest_tmp/
+
+# Generated benchmark data and user-supplied real songs
+bench/_data/
+bench/_runs/
+bench/real/songs/
+
+# Working projects (examples are committed explicitly)
+/*.kfproj/
+/projects/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

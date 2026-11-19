@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Docker-wrapped ffmpeg / ffprobe for machines where you cannot install system packages.
+
+Install by linking this script under the names ``ffmpeg`` and ``ffprobe`` (the tool to run is
+taken from the name it was invoked as), e.g. into ``$KARAFORGE_HOME/bin``::
+
+    docker build -t karaforge-ffmpeg:trixie docker/ffmpeg-wrapper
+    mkdir -p "$KARAFORGE_HOME/bin"
+    ln -s "$PWD/docker/ffmpeg-wrapper/kf-ffmpeg-docker" "$KARAFORGE_HOME/bin/ffmpeg"
+    ln -s "$PWD/docker/ffmpeg-wrapper/kf-ffmpeg-docker" "$KARAFORGE_HOME/bin/ffprobe"
+
+The container sees the same absolute paths as the host: the current directory and every
+directory that an absolute path on the command line lives in are bind-mounted at identical
+locations, so callers do not need to translate paths.  The container runs without network
+access and as the calling user, so output files keep normal ownership.
+
+Environment variables:
+    KARAFORGE_FFMPEG_IMAGE   image to run (default ``karaforge-ffmpeg:trixie``)
+    KARAFORGE_FFMPEG_MOUNTS  extra directories to mount, separated by ``:``
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+from pathlib import Path
+
+DEFAULT_IMAGE = "karaforge-ffmpeg:trixie"
+# Directories that must never be bind-mounted wholesale.
+_FORBIDDEN = {
+    Path("/"),
+    Path("/dev"),
+    Path("/proc"),
+    Path("/sys"),
+    Path("/run"),
+    Path("/etc"),
+    Path("/usr"),
+    Path("/bin"),
+    Path("/lib"),
+    Path("/var"),
+    Path("/tmp"),
+    Path("/home"),
+}
+_ABS_PATH = re.compile(r"(?<![\w.])/[^\s:=,;'\"\[\]|]+")
+
+
+def _existing_dir(candidate: str) -> Path | None:
+    """Return the closest existing directory for ``candidate`` or ``None`` if unusable."""
+    path = Path(candidate)
+    probe = path if path.is_dir() else path.parent
+    while not probe.is_dir():
+        if probe == probe.parent:
+            return None
+        probe = probe.parent
+    resolved = probe.resolve()
+    if resolved in _FORBIDDEN:
+        return None
+    return resolved
+
+
+def _collect_mounts(args: list[str]) -> list[Path]:
+    """Work out which host directories the container needs to see."""
+    wanted: set[Path] = set()
+    cwd = Path.cwd().resolve()
+    if cwd not in _FORBIDDEN:
+        wanted.add(cwd)
+    for extra in os.environ.get("KARAFORGE_FFMPEG_MOUNTS", "").split(":"):
+        if extra:
+            found = _existing_dir(extra)
+            if found is not None:
+                wanted.add(found)
+    for arg in args:
+        for match in _ABS_PATH.findall(arg):
+            found = _existing_dir(match)
+            if found is not None:
+                wanted.add(found)
+    # Drop directories that are already covered by a mounted ancestor.
+    result: list[Path] = []
+    for path in sorted(wanted, key=lambda p: len(p.parts)):
+        if not any(parent == path or parent in path.parents for parent in result):
+            result.append(path)
+    return result
+
+
+def main() -> None:
+    """Exec ``docker run`` with the right mounts for the requested tool."""
+    tool = Path(sys.argv[0]).name
+    if tool not in {"ffmpeg", "ffprobe"}:
+        tool = "ffmpeg"
+    args = sys.argv[1:]
+    image = os.environ.get("KARAFORGE_FFMPEG_IMAGE", DEFAULT_IMAGE)
+    command = [
+        "docker",
+        "run",
+        "--rm",
+        "--interactive",
+        "--init",
+        "--network",
+        "none",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "--env",
+        "HOME=/tmp",
+        "--label",
+        "karaforge.ffmpeg-wrapper=1",
+        "--workdir",
+        str(Path.cwd().resolve()),
+    ]
+    for mount in _collect_mounts(args):
+        command += ["--volume", f"{mount}:{mount}"]
+    command += [image, tool, *args]
+    os.execvp("docker", command)
+
+
+if __name__ == "__main__":
+    main()

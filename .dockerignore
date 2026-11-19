@@ -1,0 +1,15 @@
+.git
+.venv
+.tools
+.tmp
+.pytest_tmp
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/node_modules
+web/dist
+bench/_data
+bench/_runs
+bench/real/songs
+examples
+*.kfproj
