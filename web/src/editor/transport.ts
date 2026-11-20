@@ -33,6 +33,8 @@ const MODES: AudioMode[] = ['instrumental', 'original', 'vocals']
 const VIDEO_DRIFT_S = 0.12
 
 export class Transport {
+  private readonly urls: Partial<Record<AudioMode, string>>
+  private readonly createAudio: (url: string) => MediaLike
   private readonly audios: Partial<Record<AudioMode, MediaLike>> = {}
   private readonly listeners = new Set<Listener>()
   private readonly requestFrame: (callback: () => void) => number
@@ -48,21 +50,29 @@ export class Transport {
     this.durationMs = options.durationMs
     this.requestFrame = options.requestFrame ?? ((callback) => globalThis.requestAnimationFrame(callback))
     this.cancelFrame = options.cancelFrame ?? ((handle) => globalThis.cancelAnimationFrame(handle))
-    for (const mode of MODES) {
-      const url = options.sources[mode]
-      if (!url) continue
-      const audio = options.createAudio(url)
-      audio.addEventListener('ended', () => {
-        if (this.mode === mode) this.stopLoop()
-      })
-      this.audios[mode] = audio
-    }
-    this.current = MODES.find((mode) => this.audios[mode]) ?? 'original'
+    this.urls = options.sources
+    this.createAudio = options.createAudio
+    this.current = MODES.find((mode) => this.urls[mode]) ?? 'original'
   }
 
   /** Mixes that can be selected for this project. */
   get modes(): AudioMode[] {
-    return MODES.filter((mode) => this.audios[mode])
+    return MODES.filter((mode) => this.urls[mode])
+  }
+
+  /** The audio element of a mix, created the first time it is needed. */
+  private audioOf(mode: AudioMode): MediaLike | undefined {
+    const existing = this.audios[mode]
+    if (existing) return existing
+    const url = this.urls[mode]
+    if (!url) return undefined
+    const audio = this.createAudio(url)
+    audio.currentTime = this.position / 1000
+    audio.addEventListener('ended', () => {
+      if (this.mode === mode) this.stopLoop()
+    })
+    this.audios[mode] = audio
+    return audio
   }
 
   get mode(): AudioMode {
@@ -74,17 +84,17 @@ export class Transport {
   }
 
   private get master(): MediaLike | undefined {
-    return this.audios[this.current]
+    return this.audioOf(this.current)
   }
 
   get playing(): boolean {
-    const master = this.master
+    const master = this.audios[this.current]
     return master !== undefined && !master.paused
   }
 
   /** Current position in milliseconds. */
   now(): number {
-    const master = this.master
+    const master = this.audios[this.current]
     return master ? master.currentTime * 1000 : this.position
   }
 
@@ -164,11 +174,12 @@ export class Transport {
   }
 
   async setMode(mode: AudioMode): Promise<void> {
-    const next = this.audios[mode]
-    if (!next || mode === this.current) return
+    if (mode === this.current) return
     const wasPlaying = this.playing
     const time = this.now()
-    this.master?.pause()
+    const next = this.audioOf(mode)
+    if (!next) return
+    this.audios[this.current]?.pause()
     this.current = mode
     next.currentTime = time / 1000
     next.playbackRate = this.speed
@@ -178,16 +189,16 @@ export class Transport {
 
   setRate(rate: number): void {
     this.speed = Math.min(1.5, Math.max(0.5, rate))
-    const master = this.master
+    const master = this.audios[this.current]
     if (master) master.playbackRate = this.speed
     this.syncVideo(false)
   }
 
-  destroy(): void {
+  /** Stop all playback.  The transport can be used again afterwards. */
+  stop(): void {
     if (this.frame !== null) this.cancelFrame(this.frame)
     this.frame = null
     for (const mode of MODES) this.audios[mode]?.pause()
     this.video?.pause()
-    this.listeners.clear()
   }
 }

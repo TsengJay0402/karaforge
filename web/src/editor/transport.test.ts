@@ -50,6 +50,7 @@ describe('transport', () => {
     transport.subscribe((time, playing) => seen.push([time, playing]))
     expect(transport.modes).toEqual(['instrumental', 'original', 'vocals'])
     expect([transport.mode, transport.playing, transport.now()]).toEqual(['instrumental', false, 0])
+    expect(created).toEqual({}) // no audio element exists before it is needed
 
     await transport.play()
     expect(created['i.wav']?.paused).toBe(false)
@@ -124,7 +125,7 @@ describe('transport', () => {
     expect(created['i.wav']?.currentTime).toBe(0)
     created['i.wav']?.finish()
     expect(states.at(-1)).toBe(false)
-    transport.destroy()
+    transport.stop()
   })
 
   it('works without any audio at all', async () => {

@@ -6,7 +6,7 @@ import { LanguageSwitch } from '../App.tsx'
 import { api } from '../api/client.ts'
 import { activeJobOf, isActive, useJobs, useServerEvents } from '../api/events.ts'
 import type { AnalysisData, ProjectDetail, ServerEvent } from '../api/types.ts'
-import { ErrorBox, JobProgress, Spinner } from '../components/common.tsx'
+import { ErrorBox, JobProgress } from '../components/common.tsx'
 import { useT } from '../i18n/index.ts'
 import { EditorContext, type EditorContextValue, useEditor, useEditorState } from './context.ts'
 import { ExportDialog, HotkeyHelp, RealignDialog, ShiftDialog } from './Dialogs.tsx'
@@ -33,6 +33,20 @@ import { Toolbar } from './Toolbar.tsx'
 import { Transport } from './transport.ts'
 
 export type Dialog = 'export' | 'help' | 'shift' | 'realign' | 'theme' | null
+
+/** A small console API (`window.karaforge`) for scripting and for the browser tests. */
+export interface ConsoleApi {
+  seek: (timeMs: number) => void
+  now: () => number
+  play: () => Promise<void>
+  pause: () => void
+}
+
+declare global {
+  interface Window {
+    karaforge?: ConsoleApi
+  }
+}
 
 const EMPTY_ANALYSIS: AnalysisData = { onsets_ms: [] }
 
@@ -74,7 +88,7 @@ function useHotkeys(openDialog: (dialog: Dialog) => void) {
         void state.saveNow()
         return
       }
-      if (control || event.metaKey) return
+      if (control) return
 
       if (key === ' ') {
         event.preventDefault()
@@ -245,6 +259,18 @@ function Workspace({ detail, onReload }: { detail: ProjectDetail; onReload: () =
   const [clock, setClock] = useState(0)
   useHotkeys(openDialog)
 
+  useEffect(() => {
+    window.karaforge = {
+      seek: (timeMs) => transport.seek(timeMs),
+      now: () => transport.now(),
+      play: () => transport.play(),
+      pause: () => transport.pause(),
+    }
+    return () => {
+      delete window.karaforge
+    }
+  }, [transport])
+
   useEffect(
     () =>
       transport.subscribe((time, playing) => {
@@ -285,22 +311,17 @@ function Workspace({ detail, onReload }: { detail: ProjectDetail; onReload: () =
 
 export function Editor({ detail }: { detail: ProjectDetail }) {
   const id = detail.summary.id
-  const [context, setContext] = useState<EditorContextValue | null>(null)
-  const analysis = useQuery({ queryKey: ['analysis', id], queryFn: () => api.analysis(id) })
-  const jobs = useJobs((state) => state.jobs)
-  const busy = (() => {
-    const job = activeJobOf(jobs, id)
-    return job !== null && job.kind !== 'export'
-  })()
-
-  // The store and the transport live as long as this editor is mounted.  They are created
-  // in an effect (not during render) so that React's development double-mount gets a fresh
-  // pair instead of one that was already disposed.
-  useEffect(() => {
-    const store = createEditorStore(detail.project, {
+  // Created once per mounted editor (the component is keyed by project id).  Neither
+  // constructor has side effects — the transport creates its audio elements on first use —
+  // so this is safe in a state initialiser, and both objects stay usable after the cleanup
+  // below, which matters when React mounts twice in development.
+  const [context] = useState<Omit<EditorContextValue, 'analysis'>>(() => ({
+    id,
+    media: detail.media,
+    store: createEditorStore(detail.project, {
       save: (doc, revision) => api.saveProject(id, doc, revision),
-    })
-    const transport = new Transport({
+    }),
+    transport: new Transport({
       sources: sources(detail),
       durationMs: detail.project.meta.duration_ms,
       createAudio: (url) => {
@@ -308,29 +329,34 @@ export function Editor({ detail }: { detail: ProjectDetail }) {
         audio.preload = 'auto'
         return audio
       },
-    })
+    }),
+  }))
+  const analysis = useQuery({ queryKey: ['analysis', id], queryFn: () => api.analysis(id) })
+  const jobs = useJobs((state) => state.jobs)
+  const busy = (() => {
+    const job = activeJobOf(jobs, id)
+    return job !== null && job.kind !== 'export'
+  })()
+
+  useEffect(() => {
+    const { store, transport } = context
     store.getState().set({ audioMode: transport.mode })
-    setContext({ id, store, transport, media: detail.media, analysis: EMPTY_ANALYSIS })
     const flush = () => void store.getState().saveNow()
     window.addEventListener('beforeunload', flush)
     return () => {
       window.removeEventListener('beforeunload', flush)
       void store.getState().saveNow()
-      store.getState().dispose()
-      transport.destroy()
+      transport.stop()
     }
-    // The editor is keyed by project id: `detail` only matters when it mounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [context])
 
   const reload = useCallback(async () => {
-    if (!context) return
     const fresh = await api.getProject(id)
     context.store.getState().load(fresh.project)
   }, [context, id])
 
   useEffect(() => {
-    context?.store.getState().set({ readOnly: busy })
+    context.store.getState().set({ readOnly: busy })
   }, [context, busy])
 
   useServerEvents(
@@ -345,7 +371,6 @@ export function Editor({ detail }: { detail: ProjectDetail }) {
     ),
   )
 
-  if (!context) return <Spinner />
   const value: EditorContextValue = { ...context, analysis: analysis.data ?? EMPTY_ANALYSIS }
   return (
     <EditorContext.Provider value={value}>

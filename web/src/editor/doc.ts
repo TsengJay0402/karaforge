@@ -194,43 +194,50 @@ export function lineRefs(project: Project, lineIndex: number): TokenRef[] {
 }
 
 /**
- * Nudge the selected tokens together (arrow keys).  The selection moves as a block and keeps
- * its inner timing; it stops where it would run into a token that is not selected.
+ * Nudge the selected tokens (arrow keys): their *start* moves by `deltaMs`.
+ *
+ * What a nudge means for the end of a token depends on what follows it.  A token that runs
+ * straight into the next one stays attached to it (so the fill never pauses where it did
+ * not pause before); a token followed by a pause keeps its length.  The token before the
+ * selection follows in the same way.  Nothing ever becomes shorter than `MIN_TOKEN_MS`.
  */
 export function nudgeTokens(project: Project, refs: TokenRef[], deltaMs: number): void {
-  const selected = new Set(refs.map(refKey))
-  const timed = refs.filter((ref) => isTimed(tokenAt(project, ref)))
-  let delta = deltaMs
-  for (const ref of timed) {
+  const ordered = refs
+    .filter((ref) => isTimed(tokenAt(project, ref)))
+    .sort((a, b) => a.line - b.line || a.index - b.index)
+  if (ordered.length === 0 || deltaMs === 0) return
+  const old = new Map<string, { start: number; end: number }>()
+  for (const ref of allRefs(project)) {
     const token = tokenAt(project, ref)
-    if (!isTimed(token)) continue
+    if (isTimed(token)) old.set(refKey(ref), { start: token.start_ms, end: token.end_ms })
+  }
+  // Later: handle the last token first, so that each one sees where its successor went.
+  const sequence = deltaMs > 0 ? [...ordered].reverse() : ordered
+  for (const ref of sequence) {
+    const token = tokenAt(project, ref)
+    const was = old.get(refKey(ref))
+    if (!isTimed(token) || !was) continue
     const beforeRef = previousTimed(project, ref)
     const before = beforeRef ? tokenAt(project, beforeRef) : undefined
-    if (beforeRef && isTimed(before) && !selected.has(refKey(beforeRef))) {
-      delta = Math.max(delta, before.start_ms + MIN_TOKEN_MS - token.start_ms)
-    } else if (!beforeRef) {
-      delta = Math.max(delta, -token.start_ms)
-    }
     const afterRef = nextTimed(project, ref)
     const after = afterRef ? tokenAt(project, afterRef) : undefined
-    if (afterRef && isTimed(after) && !selected.has(refKey(afterRef))) {
-      delta = Math.min(delta, Math.max(0, after.start_ms - token.end_ms))
+    const afterWas = afterRef ? old.get(refKey(afterRef)) : undefined
+
+    let end = was.end + deltaMs
+    if (isTimed(after) && afterWas) {
+      const attached = was.end >= afterWas.start - 1
+      end = attached ? after.start_ms : Math.min(end, after.start_ms)
     }
-  }
-  delta = Math.round(delta)
-  if (delta === 0) return
-  for (const ref of timed) {
-    const token = tokenAt(project, ref)
-    if (!isTimed(token)) continue
-    const oldStart = token.start_ms
-    token.start_ms += delta
-    token.end_ms += delta
+    const low = isTimed(before) ? before.start_ms + MIN_TOKEN_MS : 0
+    const startAt = Math.round(clamp(was.start + deltaMs, low, Math.max(low, end - MIN_TOKEN_MS)))
+    token.start_ms = startAt
+    token.end_ms = Math.max(Math.round(end), startAt + MIN_TOKEN_MS)
     markManual(token)
-    const beforeRef = previousTimed(project, ref)
-    const before = beforeRef ? tokenAt(project, beforeRef) : undefined
-    if (beforeRef && isTimed(before) && !selected.has(refKey(beforeRef))) {
-      const touching = Math.abs(before.end_ms - oldStart) <= 1 && beforeRef.line === ref.line
-      if (before.end_ms > token.start_ms || touching) before.end_ms = token.start_ms
+
+    const beforeWas = beforeRef ? old.get(refKey(beforeRef)) : undefined
+    if (isTimed(before) && beforeRef && beforeWas) {
+      const attached = beforeRef.line === ref.line && beforeWas.end >= was.start - 1
+      if (attached || before.end_ms > startAt) before.end_ms = startAt
     }
   }
 }

@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { api } from '../api/client.ts'
+import { api, toErrorBody } from '../api/client.ts'
 import { isActive, useJobs } from '../api/events.ts'
 import type { Job } from '../api/types.ts'
-import { ErrorBox, JobProgress, Modal, toErrorBody } from '../components/common.tsx'
+import { ErrorBox, JobProgress, Modal } from '../components/common.tsx'
 import { formatBytes, type MessageKey, useI18n, useT } from '../i18n/index.ts'
 import { useEditor, useEditorState } from './context.ts'
 import { allRefs, lineRefs, shiftTokens } from './doc.ts'
@@ -162,12 +162,12 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const formats = system.data?.formats ?? []
   const chosen = formats.find((item) => item.id === format)
   const job: Job | undefined = jobId ? jobs[jobId] : undefined
-  const [seenDone, setSeenDone] = useState<string | null>(null)
+  const finished = job !== undefined && !isActive(job)
 
-  if (job && !isActive(job) && seenDone !== job.id) {
-    setSeenDone(job.id)
-    void client.invalidateQueries({ queryKey: ['exports', id] })
-  }
+  // A finished export means there is a new file to list.
+  useEffect(() => {
+    if (finished) void client.invalidateQueries({ queryKey: ['exports', id] })
+  }, [finished, client, id])
 
   const start = async () => {
     try {

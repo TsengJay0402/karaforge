@@ -1,20 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { ApiError } from '../api/client.ts'
 import type { ApiErrorBody, Job } from '../api/types.ts'
 import { errorText, type MessageKey, useI18n, useT } from '../i18n/index.ts'
-
-export function toErrorBody(cause: unknown): ApiErrorBody {
-  if (cause instanceof ApiError) return cause.body
-  return {
-    code: 'client_error',
-    message_zh: '發生沒有預期到的錯誤。',
-    message_en: 'An unexpected error occurred.',
-    hint_zh: null,
-    hint_en: null,
-    detail: cause instanceof Error ? cause.message : String(cause),
-  }
-}
 
 export function ErrorBox({ error, children }: { error: ApiErrorBody; children?: ReactNode }) {
   const lang = useI18n((state) => state.lang)

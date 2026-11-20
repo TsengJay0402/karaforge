@@ -3,10 +3,10 @@ import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { LanguageSwitch } from '../App.tsx'
-import { api } from '../api/client.ts'
+import { api, toErrorBody } from '../api/client.ts'
 import { activeJobOf, isActive, useJobs, useServerEvents } from '../api/events.ts'
 import type { ProjectDetail, ServerEvent } from '../api/types.ts'
-import { ErrorBox, JobProgress, Spinner, toErrorBody } from '../components/common.tsx'
+import { ErrorBox, JobProgress, Spinner } from '../components/common.tsx'
 import { Editor } from '../editor/Editor.tsx'
 import { type MessageKey, useT } from '../i18n/index.ts'
 
@@ -135,8 +135,7 @@ export function ProjectPage() {
   const data = detail.data
   const active = activeJobOf(jobs, id) ?? (isActive(data.summary.job) ? data.summary.job : null)
   const processing = active?.kind === 'process'
-  const failed = data.summary.last_job?.state === 'failed' && data.summary.last_job.kind === 'process'
-  if (processing || !data.summary.processed || (failed && !data.summary.processed)) {
+  if (processing || !data.summary.processed) {
     return (
       <>
         {header}

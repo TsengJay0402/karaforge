@@ -32,6 +32,19 @@ export class ApiError extends Error {
   }
 }
 
+/** Whatever was thrown, as an error the UI can show in both languages. */
+export function toErrorBody(cause: unknown): ApiErrorBody {
+  if (cause instanceof ApiError) return cause.body
+  return {
+    code: 'client_error',
+    message_zh: '發生沒有預期到的錯誤。',
+    message_en: 'An unexpected error occurred.',
+    hint_zh: null,
+    hint_en: null,
+    detail: cause instanceof Error ? cause.message : String(cause),
+  }
+}
+
 function fallbackBody(status: number, text: string): ApiErrorBody {
   return {
     code: 'http_error',

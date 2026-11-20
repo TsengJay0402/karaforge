@@ -33,7 +33,9 @@ export const useJobs = create<JobsState>((set) => ({
   setConnected: (connected) => set({ connected }),
 }))
 
-export const isActive = (job: Job | null | undefined): job is Job =>
+export type ActiveJob = Job & { state: 'queued' | 'running' }
+
+export const isActive = (job: Job | null | undefined): job is ActiveJob =>
   job != null && (job.state === 'queued' || job.state === 'running')
 
 /** The queued or running job of a project (the oldest one), if any. */

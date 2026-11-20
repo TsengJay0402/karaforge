@@ -73,6 +73,7 @@ export interface EditorState {
   saveNow: () => Promise<void>
   /** Replace the document with what the server has (after a job, or to resolve a conflict). */
   load: (doc: Project) => void
+  /** Cancel a pending autosave (the store itself stays usable). */
   dispose: () => void
 }
 
@@ -98,12 +99,10 @@ export function createEditorStore(doc: Project, deps: EditorDeps): EditorStore {
   const autosaveMs = deps.autosaveMs ?? 1000
   let timer: ReturnType<typeof setTimeout> | null = null
   let saving: Promise<void> | null = null
-  let disposed = false
 
   const store = createStore<EditorState>((set, get) => {
     const schedule = () => {
       if (timer !== null) clearTimeout(timer)
-      if (disposed) return
       timer = setTimeout(() => {
         timer = null
         void get().saveNow()
@@ -261,7 +260,6 @@ export function createEditorStore(doc: Project, deps: EditorDeps): EditorStore {
       },
 
       dispose: () => {
-        disposed = true
         if (timer !== null) clearTimeout(timer)
         timer = null
       },

@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent, useRef, useState } from 'react'
+import { type SyntheticEvent, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
-import { api } from '../api/client.ts'
-import { ErrorBox, toErrorBody } from '../components/common.tsx'
+import { api, toErrorBody } from '../api/client.ts'
+import { ErrorBox } from '../components/common.tsx'
 import { formatBytes, type MessageKey, useT } from '../i18n/index.ts'
 
 type LyricsMode = 'paste' | 'file' | 'none'
@@ -48,7 +48,7 @@ export function NewProject() {
     setTitle((current) => current || stem(file.name))
   }
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: SyntheticEvent) => {
     event.preventDefault()
     if (!media) {
       setFailure(new Error(t('new.needMedia')))

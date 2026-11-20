@@ -2,33 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import { api } from '../api/client.ts'
+import { api, toErrorBody } from '../api/client.ts'
 import { isActive, useJobs, useServerEvents } from '../api/events.ts'
 import type { ProjectSummary, ServerEvent, SystemInfo } from '../api/types.ts'
-import { ErrorBox, JobProgress, Spinner, toErrorBody } from '../components/common.tsx'
+import { ErrorBox, JobProgress, Spinner } from '../components/common.tsx'
 import { formatTime } from '../editor/timeline.ts'
 import { formatBytes, type MessageKey, useI18n, useT } from '../i18n/index.ts'
-
-export type ListState =
-  | 'broken'
-  | 'queued'
-  | 'processing'
-  | 'failed'
-  | 'noLyrics'
-  | 'new'
-  | 'partial'
-  | 'ready'
-
-export function listState(summary: ProjectSummary): ListState {
-  if (summary.broken) return 'broken'
-  if (summary.job) return summary.job.state === 'queued' ? 'queued' : 'processing'
-  const last = summary.last_job
-  if (last?.state === 'failed' && last.kind !== 'export') return 'failed'
-  if (!summary.processed) return 'new'
-  if (summary.stats.tokens === 0) return 'noLyrics'
-  if (summary.stats.timed_tokens === summary.stats.tokens) return 'ready'
-  return summary.stats.timed_tokens > 0 ? 'partial' : 'new'
-}
+import { listState } from './listState.ts'
 
 export function SystemNotices({ system }: { system: SystemInfo }) {
   const t = useT()

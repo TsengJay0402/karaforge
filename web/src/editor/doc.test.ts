@@ -142,12 +142,13 @@ describe('batch operations', () => {
     expect(doc.lines.flatMap((line) => line.tokens).some((item) => item.locked)).toBe(false)
   })
 
-  it('nudges a selection in the order that keeps the tokens apart', () => {
+  it('nudges the start of the selected tokens and keeps attached tokens attached', () => {
     const refs = [
       { line: 0, index: 0 },
       { line: 0, index: 1 },
       { line: 0, index: 2 },
     ]
+    // A whole line moves as a block (the last token is followed by a pause).
     const later = produce(song(), (draft) => nudgeTokens(draft, refs, 10))
     expect(times(later.lines[0])).toEqual([
       ['夜', 1010, 1410],
@@ -155,24 +156,53 @@ describe('batch operations', () => {
       ['裡', 1810, 2210],
     ])
     const earlier = produce(song(), (draft) => nudgeTokens(draft, refs, -10))
-    expect(times(earlier.lines[0])[0]).toEqual(['夜', 990, 1390])
-    // A partial selection stops at the tokens around it and keeps them attached.
+    expect(times(earlier.lines[0])).toEqual([
+      ['夜', 990, 1390],
+      ['空', 1390, 1790],
+      ['裡', 1790, 2190],
+    ])
+    expect(later.lines[0]!.tokens.every((item) => item.locked)).toBe(true)
+
+    // One token inside a line: its start moves, both neighbours stay attached to it.
     const middle = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 1 }], 50))
     expect(times(middle.lines[0])).toEqual([
-      ['夜', 1000, 1400],
-      ['空', 1400, 1800],
+      ['夜', 1000, 1450],
+      ['空', 1450, 1800],
       ['裡', 1800, 2200],
     ])
+    expect(middle.lines[0]!.tokens.map((item) => item.locked)).toEqual([false, true, false])
     const backwards = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 1 }], -50))
-    expect(times(backwards.lines[0]).slice(0, 2)).toEqual([
+    expect(times(backwards.lines[0])).toEqual([
       ['夜', 1000, 1350],
-      ['空', 1350, 1750],
+      ['空', 1350, 1800],
+      ['裡', 1800, 2200],
     ])
-    const lastLine = produce(song(), (draft) => nudgeTokens(draft, [{ line: 1, index: 1 }], 400))
-    expect(times(lastLine.lines[1])).toEqual([
+
+    // A token followed by a pause keeps its length.
+    const lastOfLine = produce(song(), (draft) => nudgeTokens(draft, [{ line: 1, index: 1 }], 400))
+    expect(times(lastOfLine.lines[1])).toEqual([
       ['so ', 5000, 5900],
       ['bright', 5900, 6400],
     ])
+    const beforePause = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 2 }], 99_000))
+    expect(times(beforePause.lines[0])[2]).toEqual(['裡', 4970, 5000])
+  })
+
+  it('never squeezes a token below the minimum length', () => {
+    const tooFar = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 1 }], 5000))
+    expect(times(tooFar.lines[0]).slice(0, 2)).toEqual([
+      ['夜', 1000, 1770],
+      ['空', 1770, 1800],
+    ])
+    const tooEarly = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 1 }], -5000))
+    expect(times(tooEarly.lines[0]).slice(0, 2)).toEqual([
+      ['夜', 1000, 1030],
+      ['空', 1030, 1800],
+    ])
+    const first = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 0 }], -5000))
+    expect(times(first.lines[0])[0]).toEqual(['夜', 0, 1400])
+    // Untimed tokens and an empty nudge change nothing.
+    expect(produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 0 }], 0))).toEqual(song())
   })
 
   it('locks, unlocks and clears timing', () => {
