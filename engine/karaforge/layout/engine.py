@@ -12,7 +12,8 @@ Rules implemented here (see ``docs/layout.md`` for the reasoning and pictures):
   display lines at the most balanced point, preferring a punctuation mark or a space and
   never inside a word; each part keeps the times of its own tokens.
 * **Countdown.**  When a line follows a pause of at least ``countdown.min_gap_ms``, dots above
-  its start disappear one per beat until it begins.
+  its start disappear one per beat until it begins.  Where the lyrics start a new paragraph
+  a pause of ``layout.paragraph_gap_ms`` is enough for a fresh screen and a countdown.
 * **Title card.**  Title and credits are shown before the first line when there is time.
 * **Ruby.**  Readings are centred above their token; neighbours are pushed apart just enough
   for their readings not to collide.
@@ -364,15 +365,26 @@ def _runs(measured: _Measured, em_px: float) -> list[TextRun]:
     return runs
 
 
-def _sections(lines: list[_Measured], gap_ms: int) -> list[list[_Measured]]:
+def _sections(lines: list[_Measured], gap_ms: int, paragraph_gap_ms: int) -> list[list[_Measured]]:
+    """Group the lines into stretches of continuous singing.
+
+    A new stretch starts after a pause of ``gap_ms``, or after a pause of only
+    ``paragraph_gap_ms`` where the lyrics begin a new paragraph.
+    """
     sections: list[list[_Measured]] = []
     latest_end: int | None = None
     for line in lines:
-        if latest_end is None or line.sing_start - latest_end >= gap_ms:
+        pause = None if latest_end is None else line.sing_start - latest_end
+        new_paragraph = bool(sections) and _starts_paragraph(line, sections[-1][-1])
+        if pause is None or pause >= gap_ms or (new_paragraph and pause >= paragraph_gap_ms):
             sections.append([])
         sections[-1].append(line)
         latest_end = max(latest_end or 0, line.sing_end)
     return sections
+
+
+def _starts_paragraph(line: _Measured, previous: _Measured) -> bool:
+    return line.source.paragraph != previous.source.paragraph
 
 
 def _schedule(sections: list[list[_Measured]], theme: Theme, duration_ms: int) -> None:
@@ -496,7 +508,7 @@ def build_plan(
             display.append(part)
 
     duration_ms = project.meta.duration_ms
-    sections = _sections(display, resolved.layout.section_gap_ms)
+    sections = _sections(display, resolved.layout.section_gap_ms, resolved.layout.paragraph_gap_ms)
     _schedule(sections, resolved, duration_ms)
 
     main = fonts.main
@@ -506,6 +518,7 @@ def build_plan(
     countdowns: list[PlanCountdown] = []
     interval = _beat_interval(project, resolved)
     previous_section_end: int | None = None
+    previous_tail: _Measured | None = None
 
     for section in sections:
         for position, measured in enumerate(section):
@@ -626,7 +639,11 @@ def build_plan(
             # ---- countdown for the first line after a long pause
             if position == 0 and resolved.countdown.enabled:
                 gap = measured.sing_start - (previous_section_end or 0)
-                if gap >= resolved.countdown.min_gap_ms:
+                # A paragraph that got its own section counts in after a shorter pause too.
+                counted_in = previous_tail is not None and _starts_paragraph(
+                    measured, previous_tail
+                )
+                if gap >= resolved.countdown.min_gap_ms or counted_in:
                     radius = resolved.countdown.radius * scale
                     step = 2.0 * radius + resolved.countdown.spacing * scale
                     dots_top = (
@@ -651,6 +668,7 @@ def build_plan(
                             PlanCountdown(line_id=line_id, appear_ms=max(0, appear), dots=dots)
                         )
         previous_section_end = max(line.sing_end for line in section)
+        previous_tail = section[-1]
 
     # ---- title card
     card: PlanTitleCard | None = None

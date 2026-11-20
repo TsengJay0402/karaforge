@@ -128,6 +128,43 @@ def test_long_pause_starts_a_new_screen_with_a_countdown() -> None:
     assert plan.countdowns[1].appear_ms == third.appear_ms
 
 
+def test_a_new_paragraph_starts_a_new_screen_after_a_shorter_pause() -> None:
+    def plan_for(paragraph: int, pause_ms: int, **overrides: object) -> RenderPlan:
+        first = timed_line("L001", "夜空裡的星星", 10_000)  # sung until 12.4 s
+        second = timed_line("L002", "慢慢亮起來", 12_400 + pause_ms, paragraph=paragraph)
+        theme = load_theme("classic-ktv").with_overrides(dict(overrides))
+        return build_plan(song_project([first, second]), theme)
+
+    # The same paragraph: 2.5 s is an ordinary breath, the second line waits in the lower row.
+    same = plan_for(0, 2_500)
+    assert [line.row for line in same.lines] == [0, 1]
+    assert [countdown.line_id for countdown in same.countdowns] == ["L001"]
+
+    # After a blank line in the lyrics the same pause clears the screen and counts in.
+    new = plan_for(1, 2_500)
+    first, second = new.lines
+    assert [first.row, second.row] == [0, 0]
+    assert second.appear_ms >= first.disappear_ms
+    assert [countdown.line_id for countdown in new.countdowns] == ["L001", "L002"]
+    dots = new.countdowns[1].dots
+    assert dots and all(
+        new.countdowns[1].appear_ms < dot.off_ms <= second.sing_start_ms for dot in dots
+    )
+
+    # A paragraph break without a real pause changes nothing, and the threshold is a setting.
+    assert [line.row for line in plan_for(1, 1_200).lines] == [0, 1]
+    assert [
+        line.row for line in plan_for(1, 2_500, **{"layout.paragraph_gap_ms": 4_000}).lines
+    ] == [
+        0,
+        1,
+    ]
+    assert [line.row for line in plan_for(1, 600, **{"layout.paragraph_gap_ms": 500}).lines] == [
+        0,
+        0,
+    ]
+
+
 def test_no_countdown_without_a_long_pause_or_when_disabled() -> None:
     plan = build_plan(song_project([timed_line("L001", "一二三", 2_000)]))
     assert plan.countdowns == []

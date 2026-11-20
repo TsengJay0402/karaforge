@@ -143,6 +143,9 @@ class LayoutSettings(_Section):
     fade_ms: int = Field(default=150, ge=0)
     section_gap_ms: int = Field(default=4000, ge=500)
     """A pause at least this long clears the screen and restarts with the first row."""
+    paragraph_gap_ms: int = Field(default=2000, ge=0)
+    """Where the lyrics start a new paragraph (a blank line), a shorter pause is enough: the
+    screen is cleared and the countdown shown when the pause is at least this long."""
 
 
 class RubySettings(_Section):
