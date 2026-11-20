@@ -69,6 +69,7 @@ kf run my-song.kfproj --set align.aligner=whisper-attn --set asr.model=whisper-m
 | `align.coarse` | `asr` | 行的時間窗怎麼來：`asr`（與語音辨識比對，正常模式）、`regions`（不用辨識結果）、`global`（整首一次對齊）。後兩種是給消融實驗用的。 |
 | `align.window_pad_ms` | 1000 | 細對齊時，每一行的時間窗前後各多留多少 |
 | `align.context_tokens` | 4 | 鄰行的字可能落在時間窗裡時，給對齊器幾個鄰行的字當上下文 |
+| `align.anchor_context` | `true` | 重新對齊時怎麼使用鎖定的字：連同鎖定字一起對齊相鄰的字，行的時間窗同時參考鎖定字與辨識結果。`false` 是舊版（第 7 版）的行為，只供比較 |
 | `align.lead_ms` | 依對齊器 | 從每個開始時間扣掉的固定值（對齊器的系統性偏差）；預設用各對齊器在開發資料上校正出來的值 |
 | `align.onset_snap` | `true` | 把字的開頭吸附到附近的起音點 |
 | `align.onset_snap_ms` | 60 | 最多移動多遠 |
@@ -88,5 +89,5 @@ kf run my-song.kfproj --set align.aligner=whisper-attn --set asr.model=whisper-m
 幾個實用的事實：
 
 - 最慢的是人聲分離與語音辨識；兩者的結果都會被快取，所以**調整對齊參數或修改歌詞後重跑很快**。
-- `ctc` 對齊器把整首歌的聲學模型輸出算一次就存起來，之後每一次重新對齊（包括在編輯器裡修幾個字再按重新對齊）都不必再跑模型。
+- `ctc` 對齊器把整首歌的聲學模型輸出算一次就留在記憶體裡；在同一個行程裡（例如開著的 Web 伺服器）之後每一次重新對齊都不必再跑模型。用 CLI 時每次執行是新的行程，會重算一次。
 - `KARAFORGE_THREADS` 可以調整推論用的 CPU 執行緒數。

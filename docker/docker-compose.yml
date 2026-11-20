@@ -1,0 +1,53 @@
+# KaraForge with Docker Compose.
+#
+#   CPU:     docker compose -f docker/docker-compose.yml up
+#   NVIDIA:  docker compose -f docker/docker-compose.yml --profile gpu up karaforge-gpu
+#
+# Then open http://127.0.0.1:8765 .  Projects are kept in ./projects next to where you run
+# the command (override with KARAFORGE_PROJECTS_DIR); model weights, user themes and user
+# fonts in the named volume `karaforge-home` — they are downloaded on first use and are never
+# part of the image.
+#
+# The port is published on 127.0.0.1 only: the server has no login.
+
+name: karaforge
+
+x-karaforge: &karaforge
+  restart: unless-stopped
+  ports:
+    - "127.0.0.1:${KARAFORGE_PORT:-8765}:8765"
+  volumes:
+    - ${KARAFORGE_PROJECTS_DIR:-./projects}:/data/projects
+    - karaforge-home:/data/home
+  environment:
+    KARAFORGE_LANG: ${KARAFORGE_LANG:-zh}
+
+services:
+  karaforge:
+    <<: *karaforge
+    image: karaforge:cpu
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: cpu
+
+  karaforge-gpu:
+    <<: *karaforge
+    profiles: ["gpu"]
+    image: karaforge:cuda
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  karaforge-home:

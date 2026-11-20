@@ -3,7 +3,8 @@
 # KaraForge image.  Two variants are built from this one file:
 #   docker build -f docker/Dockerfile --build-arg VARIANT=cpu  -t karaforge:cpu  .
 #   docker build -f docker/Dockerfile --build-arg VARIANT=cuda -t karaforge:cuda .
-# Model weights are never baked in: mount a volume at /data/models (see docker-compose.yml).
+# Model weights are never baked in: they live in the volume mounted at /data/home (see
+# docker/docker-compose.yml), together with user themes and fonts.
 
 ARG PYTHON_VERSION=3.12
 ARG NODE_VERSION=24
@@ -54,7 +55,7 @@ RUN apt-get update \
 
 RUN groupadd --gid 1000 karaforge \
     && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin karaforge \
-    && mkdir -p /data/models /data/projects \
+    && mkdir -p /data/home /data/projects \
     && chown -R karaforge:karaforge /data
 
 COPY --from=builder /app/.venv /app/.venv
@@ -62,13 +63,13 @@ COPY --from=web /src/web/dist /app/web
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    KARAFORGE_HOME=/data/models \
-    KARAFORGE_PROJECTS=/data/projects \
+    KARAFORGE_HOME=/data/home \
+    KARAFORGE_WORKSPACE=/data/projects \
     KARAFORGE_WEB_DIST=/app/web
 
 USER karaforge
 WORKDIR /data/projects
-VOLUME ["/data/models", "/data/projects"]
+VOLUME ["/data/home", "/data/projects"]
 EXPOSE 8765
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

@@ -7,7 +7,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from karaforge.adapters.base import Aligner, AsrWord
-from karaforge.align.coarse import LineWindow, LyricLine, coarse_align, distribute_lines
+from karaforge.align.coarse import (
+    CoarseSettings,
+    LineWindow,
+    LyricLine,
+    coarse_align,
+    distribute_lines,
+)
 from karaforge.align.confidence import score_tokens
 from karaforge.align.features import VocalFeatures
 from karaforge.align.fine import TokenTiming, fine_align
@@ -20,7 +26,7 @@ from karaforge.runtime import CancelToken, ProgressFn, null_progress, subprogres
 from karaforge.text.romanize import romanize_tokens
 from karaforge.text.tokenize import TokenKind, tokenize
 
-ALIGN_ALGORITHM_VERSION = "7"
+ALIGN_ALGORITHM_VERSION = "8"
 """Bump when the algorithm changes in a way that alters results for the same inputs."""
 
 
@@ -122,10 +128,11 @@ def run_alignment(
     seconds: dict[str, float] = {}
 
     started = time.monotonic()
+    coarse_settings = CoarseSettings(anchors_use_transcript=settings.anchor_context)
     if settings.coarse == "asr":
-        windows = coarse_align(lines, words, features.regions_s, duration)
+        windows = coarse_align(lines, words, features.regions_s, duration, coarse_settings)
     elif settings.coarse == "regions":
-        windows = coarse_align(lines, [], features.regions_s, duration)
+        windows = coarse_align(lines, [], features.regions_s, duration, coarse_settings)
     else:
         windows = _global_windows(lines, features, duration)
     seconds["coarse"] = time.monotonic() - started
@@ -147,6 +154,7 @@ def run_alignment(
             max_window_s=max_window_s,
             features=features,
             context_tokens=settings.context_tokens,
+            anchor_context=settings.anchor_context,
         )
     lead_ms = settings.lead_ms if settings.lead_ms is not None else getattr(aligner, "lead_ms", 0)
     if lead_ms:

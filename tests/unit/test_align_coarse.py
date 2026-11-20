@@ -128,6 +128,49 @@ def test_locked_token_anchors_its_line_exactly() -> None:
     assert windows[0].end_s <= 21.0
 
 
+def test_a_locked_token_keeps_what_the_transcript_knows_about_the_rest_of_its_line() -> None:
+    # Eleven tokens sung slowly, 0.8 s each, from 10.0 s: the line lasts until 18.8 s.
+    text = LINES[0]
+    words = sung_words(text, 10.0, 0.8)
+    # The user corrects the third token (which the recogniser had at 11.6 s) to 11.7 s.
+    line = lyric_line("L1", text, locked={2: (11.7, 12.4)})
+    window = coarse_align([line], words, [(10.0, 18.8)], 30.0)[0]
+    assert window.source == "anchor" and window.quality == 1.0
+    # Start and end still come from the recognised first and last tokens.
+    assert window.start_s == pytest.approx(10.0, abs=0.15)
+    assert window.end_s == pytest.approx(18.8, abs=0.5)
+
+    # Version 7 used the lock alone and guessed 0.4 s per token: the window ended at 15.3 s,
+    # three and a half seconds before the line does.
+    old = coarse_align(
+        [line], words, [(10.0, 18.8)], 30.0, CoarseSettings(anchors_use_transcript=False)
+    )[0]
+    assert old.start_s == pytest.approx(11.7 - 2 * 0.4)
+    assert old.end_s == pytest.approx(11.7 + 9 * 0.4)
+
+
+def test_recognised_tokens_that_disagree_with_a_lock_are_left_out() -> None:
+    text = LINES[0]
+    # The recogniser placed the whole line 20 s too early (it matched an earlier chorus).
+    words = sung_words(text, 10.0, 0.4)
+    line = lyric_line("L1", text, locked={0: (30.0, 30.4)})
+    window = coarse_align([line], words, [(10.0, 14.4), (30.0, 34.4)], 40.0)[0]
+    # Nothing recognised lies after the locked first token within reach: the lock decides.
+    assert window.start_s == pytest.approx(30.0)
+    assert window.end_s == pytest.approx(30.0 + 11 * 0.4)
+
+    # A lock in the middle: recognised tokens on the wrong side of it are ignored, the ones
+    # on the right side are used.
+    line = lyric_line("L1", text, locked={5: (12.0, 12.4)})
+    shuffled = [
+        *sung_words(text[:5], 10.0, 0.4),  # before the lock, in time before it: fine
+        *sung_words(text[5:], 11.0, 0.05),  # tokens 5-10 squeezed in *before* 12.0 s
+    ]
+    window = coarse_align([line], shuffled, [(10.0, 14.4)], 40.0)[0]
+    assert window.start_s == pytest.approx(10.0, abs=0.15)
+    assert window.end_s >= 12.4
+
+
 def test_transcript_that_contradicts_a_locked_token_is_ignored_for_that_line() -> None:
     lines = [
         lyric_line("L1", LINES[0], locked={0: (30.0, 30.4)}),

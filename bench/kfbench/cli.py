@@ -106,6 +106,16 @@ def build_configs(
                 overrides=overrides,
                 anchors="low-confidence",
             ),
+            # The same random anchors used the way algorithm version 7 used them (the window
+            # from the locks alone, the audio cut at their edges): part of every anchor
+            # experiment, so that the difference stays visible.
+            BenchConfig(
+                name=f"{profile} / anchors-random-5% (v7 handling)",
+                profile=profile,
+                overrides={**overrides, "align.anchor_context": False},
+                anchors="random",
+                anchor_seed=f"{profile} / anchors-random-5%",
+            ),
         ]
     for aligner in dict.fromkeys(aligners):
         if aligner == main_aligner:

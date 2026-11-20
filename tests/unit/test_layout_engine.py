@@ -129,40 +129,60 @@ def test_long_pause_starts_a_new_screen_with_a_countdown() -> None:
 
 
 def test_a_new_paragraph_starts_a_new_screen_after_a_shorter_pause() -> None:
-    def plan_for(paragraph: int, pause_ms: int, **overrides: object) -> RenderPlan:
-        first = timed_line("L001", "夜空裡的星星", 10_000)  # sung until 12.4 s
-        second = timed_line("L002", "慢慢亮起來", 12_400 + pause_ms, paragraph=paragraph)
+    def rows_and_countdowns(
+        paragraph: int, pause_ms: int, **overrides: object
+    ) -> tuple[list[int], list[str], RenderPlan]:
+        # A first paragraph of two lines, then the two lines under test; the last one is sung
+        # ``pause_ms`` after the one before it ends (at 12.4 s).
+        lines = [
+            timed_line("A1", "啦啦啦", 1_000),
+            timed_line("A2", "嗚嗚嗚", 2_400),
+            timed_line("L001", "夜空裡的星星", 10_000, paragraph=1),
+            timed_line("L002", "慢慢亮起來", 12_400 + pause_ms, paragraph=1 + paragraph),
+        ]
         theme = load_theme("classic-ktv").with_overrides(dict(overrides))
-        return build_plan(song_project([first, second]), theme)
+        plan = build_plan(song_project(lines), theme)
+        rows = [line.row for line in plan.lines if line.id.startswith("L")]
+        counted = [item.line_id for item in plan.countdowns if item.line_id.startswith("L")]
+        return rows, counted, plan
 
     # The same paragraph: 2.5 s is an ordinary breath, the second line waits in the lower row.
-    same = plan_for(0, 2_500)
-    assert [line.row for line in same.lines] == [0, 1]
-    assert [countdown.line_id for countdown in same.countdowns] == ["L001"]
+    rows, counted, _plan = rows_and_countdowns(0, 2_500)
+    assert rows == [0, 1]
+    assert counted == ["L001"]
 
     # After a blank line in the lyrics the same pause clears the screen and counts in.
-    new = plan_for(1, 2_500)
-    first, second = new.lines
-    assert [first.row, second.row] == [0, 0]
+    rows, counted, plan = rows_and_countdowns(1, 2_500)
+    assert rows == [0, 0]
+    assert counted == ["L001", "L002"]
+    first, second = (line for line in plan.lines if line.id.startswith("L"))
     assert second.appear_ms >= first.disappear_ms
-    assert [countdown.line_id for countdown in new.countdowns] == ["L001", "L002"]
-    dots = new.countdowns[1].dots
-    assert dots and all(
-        new.countdowns[1].appear_ms < dot.off_ms <= second.sing_start_ms for dot in dots
-    )
+    countdown = next(item for item in plan.countdowns if item.line_id == "L002")
+    assert countdown.dots
+    assert all(countdown.appear_ms < dot.off_ms <= second.sing_start_ms for dot in countdown.dots)
 
     # A paragraph break without a real pause changes nothing, and the threshold is a setting.
-    assert [line.row for line in plan_for(1, 1_200).lines] == [0, 1]
-    assert [
-        line.row for line in plan_for(1, 2_500, **{"layout.paragraph_gap_ms": 4_000}).lines
-    ] == [
-        0,
-        1,
+    assert rows_and_countdowns(1, 1_200)[0] == [0, 1]
+    assert rows_and_countdowns(1, 2_500, **{"layout.paragraph_gap_ms": 4_000})[0] == [0, 1]
+    assert rows_and_countdowns(1, 600, **{"layout.paragraph_gap_ms": 500})[0] == [0, 0]
+
+
+def test_blank_lines_after_every_line_are_not_paragraphs() -> None:
+    # Lyrics pasted with a blank line after each line: every line is its own "paragraph".
+    lines = [
+        timed_line("L001", "夜空裡的星星", 10_000, paragraph=0),
+        timed_line("L002", "慢慢亮起來", 14_900, paragraph=1),
+        timed_line("L003", "我站在路口", 19_400, paragraph=2),
     ]
-    assert [line.row for line in plan_for(1, 600, **{"layout.paragraph_gap_ms": 500}).lines] == [
-        0,
-        0,
-    ]
+    plan = build_plan(song_project(lines))
+    # The 2.5 s pauses are ordinary ones: two rows alternate, nothing counts in again.
+    assert [line.row for line in plan.lines] == [0, 1, 0]
+    assert [countdown.line_id for countdown in plan.countdowns] == ["L001"]
+    # As soon as one paragraph has two lines, the blank lines mean something.
+    lines[1] = timed_line("L002", "慢慢亮起來", 14_900, paragraph=0)
+    plan = build_plan(song_project(lines))
+    assert [line.row for line in plan.lines] == [0, 1, 0]
+    assert [countdown.line_id for countdown in plan.countdowns] == ["L001", "L003"]
 
 
 def test_no_countdown_without_a_long_pause_or_when_disabled() -> None:

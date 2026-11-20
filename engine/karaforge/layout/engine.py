@@ -371,11 +371,12 @@ def _sections(lines: list[_Measured], gap_ms: int, paragraph_gap_ms: int) -> lis
     A new stretch starts after a pause of ``gap_ms``, or after a pause of only
     ``paragraph_gap_ms`` where the lyrics begin a new paragraph.
     """
+    structured = _has_paragraphs(lines)
     sections: list[list[_Measured]] = []
     latest_end: int | None = None
     for line in lines:
         pause = None if latest_end is None else line.sing_start - latest_end
-        new_paragraph = bool(sections) and _starts_paragraph(line, sections[-1][-1])
+        new_paragraph = structured and bool(sections) and _starts_paragraph(line, sections[-1][-1])
         if pause is None or pause >= gap_ms or (new_paragraph and pause >= paragraph_gap_ms):
             sections.append([])
         sections[-1].append(line)
@@ -385,6 +386,20 @@ def _sections(lines: list[_Measured], gap_ms: int, paragraph_gap_ms: int) -> lis
 
 def _starts_paragraph(line: _Measured, previous: _Measured) -> bool:
     return line.source.paragraph != previous.source.paragraph
+
+
+def _has_paragraphs(lines: list[_Measured]) -> bool:
+    """Whether the paragraphs of the lyrics mean anything.
+
+    Lyrics pasted from a web page often have a blank line after *every* line.  Then each
+    line is a "paragraph" of its own and the blank lines say nothing about the song's
+    sections; paragraphs only count when at least one of them holds two lines.
+    """
+    sources: list[Line] = []
+    for line in lines:
+        if not sources or sources[-1] is not line.source:
+            sources.append(line.source)
+    return any(first.paragraph == second.paragraph for first, second in pairwise(sources))
 
 
 def _schedule(sections: list[list[_Measured]], theme: Theme, duration_ms: int) -> None:
@@ -509,6 +524,7 @@ def build_plan(
 
     duration_ms = project.meta.duration_ms
     sections = _sections(display, resolved.layout.section_gap_ms, resolved.layout.paragraph_gap_ms)
+    structured = _has_paragraphs(display)
     _schedule(sections, resolved, duration_ms)
 
     main = fonts.main
@@ -640,8 +656,10 @@ def build_plan(
             if position == 0 and resolved.countdown.enabled:
                 gap = measured.sing_start - (previous_section_end or 0)
                 # A paragraph that got its own section counts in after a shorter pause too.
-                counted_in = previous_tail is not None and _starts_paragraph(
-                    measured, previous_tail
+                counted_in = (
+                    structured
+                    and previous_tail is not None
+                    and _starts_paragraph(measured, previous_tail)
                 )
                 if gap >= resolved.countdown.min_gap_ms or counted_in:
                     radius = resolved.countdown.radius * scale

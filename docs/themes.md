@@ -76,7 +76,7 @@ layout:
   linger_ms: 700              # 最後一行唱完後停留多久
   fade_ms: 150                # 淡入淡出
   section_gap_ms: 4000        # 停頓這麼久就清空畫面、從第一排重新開始
-  paragraph_gap_ms: 2000      # 歌詞換段（空行）時，停頓這麼久就夠了
+  paragraph_gap_ms: 2000      # 歌詞換段（空行）時，停頓這麼久就夠了；每行都空一行的歌詞不算有分段
 
 ruby:                         # 字上方的讀音（注音／拼音），見 ruby.md
   enabled: false

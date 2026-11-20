@@ -101,6 +101,10 @@ class CoarseSettings:
     """Below this overall share the transcript is ignored altogether."""
     max_hit_gap_s: float = 4.0
     """Matched tokens of one line further apart than this belong to different runs."""
+    anchors_use_transcript: bool = True
+    """A line with locked tokens takes its window from the locks *and* the recognised tokens
+    that agree with them.  ``False`` uses the locks alone (algorithm version 7), which
+    replaces a good window by a guess from the token count as soon as one token is locked."""
 
 
 def _letter_sequence(lines: Sequence[LyricLine]) -> tuple[str, list[tuple[int, int]]]:
@@ -257,6 +261,31 @@ def _window_from_hits(line: LyricLine, hits: list[tuple[int, float]]) -> tuple[f
     return start, end
 
 
+def _anchor_window(line: LyricLine, hits: list[tuple[int, float]]) -> LineWindow:
+    """Window of a line that has locked tokens, from ``hits`` (the locks and what agrees)."""
+    start, end = _window_from_hits(line, hits)
+    last = line.locked[line.size - 1] if line.size else None
+    if last is not None:
+        end = last[1]
+    return LineWindow(start, max(end, start), 1.0, "anchor")
+
+
+def _agrees(
+    position: int, time_s: float, locks: Sequence[tuple[int, float]], max_gap_s: float
+) -> bool:
+    """Whether a recognised token time is compatible with every locked token of its line.
+
+    It has to lie on the right side of each lock, and no further from it than tokens can
+    plausibly be apart (the same allowance as between two recognised tokens).
+    """
+    for lock_position, lock_time in locks:
+        distance = (time_s - lock_time) if position > lock_position else (lock_time - time_s)
+        allowed = max(max_gap_s, 1.5 * abs(position - lock_position) + 2.0)
+        if not 0.0 <= distance <= allowed:
+            return False
+    return True
+
+
 def _clip_regions(
     regions: Sequence[tuple[float, float]], start: float, end: float
 ) -> list[tuple[float, float]]:
@@ -345,20 +374,17 @@ def coarse_align(
     hints: list[list[float | None]] = [[None] * line.size for line in lines]
 
     # ---- locked tokens are exact anchors
+    lock_hits: dict[int, list[tuple[int, float]]] = {}
     for index, line in enumerate(lines):
         locked = line.locked_indices
         if not locked:
             continue
-        hits = [
+        lock_hits[index] = [
             (position, lock[0])
             for position in locked
             if (lock := line.locked[position]) is not None
         ]
-        start, end = _window_from_hits(line, hits)
-        last_lock = line.locked[locked[-1]]
-        if last_lock is not None and locked[-1] == line.size - 1:
-            end = last_lock[1]
-        windows[index] = LineWindow(start, max(end, start), 1.0, "anchor")
+        windows[index] = _anchor_window(line, lock_hits[index])
 
     # ---- line times of an imported file
     for index, line in enumerate(lines):
@@ -393,6 +419,28 @@ def coarse_align(
     transcript_usable = (
         total_letters > 0 and total_matched / total_letters >= config.min_global_quality
     )
+
+    if transcript_usable and config.anchors_use_transcript:
+        # A locked token says where *it* is; where the rest of its line is, the transcript
+        # still knows better than a guess from the token count.  The line's window therefore
+        # comes from the locks together with every recognised token that agrees with them.
+        for index, locks in lock_hits.items():
+            line = lines[index]
+            agreeing = [
+                (position, hint)
+                for position, reading in enumerate(line.readings)
+                if reading
+                and line.locked[position] is None
+                and (hint := hints[index][position]) is not None
+                and matched_equal[index][position] * 2 >= len(reading)
+                and _agrees(position, hint, locks, config.max_hit_gap_s)
+            ]
+            merged: list[tuple[int, float]] = []
+            for hit in sorted([*locks, *agreeing]):
+                if not merged or hit[1] >= merged[-1][1] or line.locked[hit[0]] is not None:
+                    merged.append(hit)
+            if len(merged) > len(locks):
+                windows[index] = _anchor_window(line, merged)
 
     if transcript_usable:
         for index, line in enumerate(lines):

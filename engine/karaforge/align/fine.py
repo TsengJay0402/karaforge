@@ -25,6 +25,9 @@ from karaforge.audio.io import MODEL_RATE, FloatArray
 from karaforge.runtime import CancelToken, ProgressFn
 
 _MIN_RUN_S_PER_TOKEN = 0.03
+_ANCHOR_TAIL_S = 0.3
+"""Audio kept after the start of a locked token that follows a run, so that the aligner
+hears enough of it to recognise it even when the token is very short."""
 _MEMO_SIZE = 4096
 _memo: OrderedDict[tuple[object, ...], list[UnitTiming]] = OrderedDict()
 _memo_lock = threading.Lock()
@@ -125,6 +128,12 @@ def _spread(start: float, end: float, count: int) -> list[tuple[float, float]]:
     return [(start + index * step, start + (index + 1) * step) for index in range(count)]
 
 
+def _unit(line: LyricLine, index: int) -> AlignUnit:
+    return AlignUnit(
+        text=line.cores[index], kind=line.kinds[index], reading=line.readings[index] or None
+    )
+
+
 def _align_run(
     line: LyricLine,
     indices: list[int],
@@ -139,26 +148,47 @@ def _align_run(
     prefix: Sequence[AlignUnit] = (),
     suffix: Sequence[AlignUnit] = (),
     audio_key: str = "",
+    lead: AlignUnit | None = None,
+    trail: AlignUnit | None = None,
+    floor_s: float | None = None,
+    ceiling_s: float | None = None,
 ) -> list[TokenTiming]:
-    """Align the tokens ``indices`` of ``line`` inside ``[start_s, end_s]``."""
+    """Align the tokens ``indices`` of ``line`` inside the audio ``[start_s, end_s]``.
+
+    Args:
+        line: The line the tokens belong to.
+        indices: The tokens to align (a run of unlocked tokens).
+        start_s: Start of the audio given to the aligner.
+        end_s: End of that audio.
+        audio: The whole vocal stem.
+        aligner: The forced aligner.
+        language: Project language.
+        open_start: The audio may begin with sound that belongs to none of the units.
+        open_end: The same for its end.
+        prefix: Context units of the previous line.
+        suffix: Context units of the next line.
+        audio_key: Identifies ``audio`` for the memo of aligner answers.
+        lead: A locked token directly before the run.  It is aligned together with the run —
+            the audio then starts where that token starts — and its timing is thrown away.
+        trail: A locked token directly after the run, likewise.
+        floor_s: Earliest time a token of the run may get (default ``start_s``).
+        ceiling_s: Latest time (default ``end_s``).
+    """
+    floor = start_s if floor_s is None else floor_s
+    ceiling = end_s if ceiling_s is None else ceiling_s
+    ceiling = max(ceiling, floor)
     voiced = [index for index in indices if line.cores[index]]
-    span = end_s - start_s
-    if not voiced or span < _MIN_RUN_S_PER_TOKEN * len(voiced):
+    if not voiced or ceiling - floor < _MIN_RUN_S_PER_TOKEN * len(voiced):
         return [
             TokenTiming(low, high, 0.0, estimated=True)
-            for low, high in _spread(start_s, max(start_s, end_s), len(indices))
+            for low, high in _spread(floor, ceiling, len(indices))
         ]
     first_sample = max(0, round(start_s * MODEL_RATE))
     last_sample = min(audio.size, round(end_s * MODEL_RATE))
-    units = [
-        AlignUnit(
-            text=line.cores[index], kind=line.kinds[index], reading=line.readings[index] or None
-        )
-        for index in voiced
-    ]
+    units = [_unit(line, index) for index in voiced]
     request = AlignRequest(
         audio=audio[first_sample:last_sample],
-        units=units,
+        units=[*([lead] if lead else []), *units, *([trail] if trail else [])],
         language=language,
         open_start=open_start,
         open_end=open_end,
@@ -167,11 +197,12 @@ def _align_run(
         offset_s=first_sample / MODEL_RATE,
     )
     timings = _ask(aligner, request, audio_key) if audio_key else aligner.align(request)
+    timings = list(timings)[(1 if lead else 0) : len(timings) - (1 if trail else 0)]
     offset = first_sample / MODEL_RATE
     by_index = {
         index: TokenTiming(
-            start_s=min(end_s, max(start_s, offset + timing.start_s)),
-            end_s=min(end_s, max(start_s, offset + timing.end_s)),
+            start_s=min(ceiling, max(floor, offset + timing.start_s)),
+            end_s=min(ceiling, max(floor, offset + timing.end_s)),
             score=timing.score,
         )
         for index, timing in zip(voiced, timings, strict=True)
@@ -183,7 +214,7 @@ def _align_run(
             result.append(by_index[index])
             continue
         following = next((by_index[i] for i in indices[position + 1 :] if i in by_index), None)
-        anchor = following.start_s if following is not None else end_s
+        anchor = following.start_s if following is not None else ceiling
         result.append(TokenTiming(anchor, anchor, 0.0, estimated=True))
     return result
 
@@ -201,6 +232,7 @@ def fine_align(
     max_window_s: float | None = None,
     features: VocalFeatures | None = None,
     context_tokens: int = 4,
+    anchor_context: bool = True,
 ) -> list[list[TokenTiming]]:
     """Run the aligner on every line.
 
@@ -216,6 +248,8 @@ def fine_align(
         max_window_s: Longest window the aligner accepts, if it has a limit.
         features: Vocal features; used to notice that a window starts or ends mid-singing.
         context_tokens: Tokens of the neighbouring lines passed to the aligner as context.
+        anchor_context: Align the tokens next to a locked token together with that token
+            (see ``AlignSettings.anchor_context``).
 
     Returns:
         For each line, one :class:`TokenTiming` per token.
@@ -278,14 +312,34 @@ def fine_align(
             right = timings[run_end] if run_end < line.size else None
             run_start = left.end_s if left is not None else low
             run_stop = right.start_s if right is not None else high
-            if left is not None and right is not None and run_stop < run_start:
-                run_start = run_stop = (run_start + run_stop) / 2.0
-            run_stop = max(run_stop, run_start)
+            # A locked neighbour is aligned together with the run instead of cutting the
+            # audio at its edge: an aligner needs to hear whole syllables, and where the
+            # user says a token starts is firmer knowledge than where it ends.
+            lead = trail = None
+            audio_start, audio_stop = run_start, run_stop
+            floor = run_start
+            if anchor_context and left is not None and line.cores[index - 1]:
+                lead = _unit(line, index - 1)
+                audio_start = left.start_s
+                floor = left.start_s + _MIN_RUN_S_PER_TOKEN
+            if anchor_context and right is not None and line.cores[run_end]:
+                trail = _unit(line, run_end)
+                audio_stop = min(duration, max(right.end_s, right.start_s + _ANCHOR_TAIL_S))
+            if max_window_s is not None and audio_stop - audio_start > max_window_s:
+                lead = trail = None
+                audio_start, audio_stop, floor = run_start, run_stop, run_start
+            if lead is None and trail is None and left is not None and right is not None:
+                # Cut at both locks: when they overlap, the run gets the instant in between.
+                if run_stop < run_start:
+                    run_start = run_stop = (run_start + run_stop) / 2.0
+                audio_start, audio_stop, floor = run_start, run_stop, run_start
+            ceiling = max(run_stop, floor) if lead is None else run_stop
+            audio_stop = max(audio_stop, audio_start)
             aligned = _align_run(
                 line,
                 list(range(index, run_end)),
-                run_start,
-                run_stop,
+                audio_start,
+                audio_stop,
                 audio,
                 aligner,
                 language,
@@ -294,6 +348,10 @@ def fine_align(
                 prefix=prefix if left is None else (),
                 suffix=suffix if right is None else (),
                 audio_key=audio_key,
+                lead=lead,
+                trail=trail,
+                floor_s=floor,
+                ceiling_s=ceiling,
             )
             timings[index:run_end] = aligned
             index = run_end

@@ -15,7 +15,7 @@ from kfbench.metrics import (
     summarize,
     wrong_line,
 )
-from kfbench.report import TARGETS, build_report, per_song_medians, timing_rows
+from kfbench.report import TARGETS, anchor_effects, build_report, per_song_medians, timing_rows
 from kfbench.runner import (
     RunResult,
     choose_anchors,
@@ -233,11 +233,17 @@ def test_build_configs_expands_aligners_ablation_and_anchors() -> None:
         "balanced / no-long-note",
         "balanced / anchors-random-5%",
         "balanced / anchors-lowconf-5%",
+        "balanced / anchors-random-5% (v7 handling)",
         "balanced+whisper-attn",
         "balanced+hybrid",
     ]
     assert (main, anchor) == ("balanced", "balanced / anchors-random-5%")
     by_name = {config.name: config for config in configs}
+    # The comparison with the old anchor handling locks the very same tokens.
+    cut = by_name["balanced / anchors-random-5% (v7 handling)"]
+    assert cut.overrides["align.anchor_context"] is False
+    assert cut.anchor_seed == "balanced / anchors-random-5%" and cut.anchors == "random"
+    assert by_name["balanced / anchors-random-5%"].anchor_seed is None
     ablated = by_name["balanced / no-onset-snap"].overrides
     assert ablated == {"align.onset_snap_ms": 80, "align.onset_snap": False}
     assert by_name["balanced / no-weak-rescue"].overrides["align.weak_score"] == 0
@@ -312,6 +318,54 @@ def test_report_compares_with_targets_and_lists_every_group() -> None:
     )
     assert zh["songs"] == 2 and zh["tokens"] == 8
     assert json.dumps(document, ensure_ascii=False)
+
+
+def test_anchor_effects_pair_the_same_tokens_before_and_after() -> None:
+    def result(config: str, errors: list[int], locked: frozenset[int] = frozenset()) -> RunResult:
+        return RunResult(
+            item="zh-1000-snr10",
+            song="zh-1000",
+            language="zh",
+            snr_db=10,
+            config=config,
+            outcomes=[
+                outcome(error, index=index, locked=index in locked)
+                for index, error in enumerate(errors)
+            ],
+            stage_seconds={},
+            audio_seconds=60.0,
+            windows_from={},
+            anchors=len(locked),
+        )
+
+    results = [
+        result("balanced", [10, 300, 20, 400, 30, 40]),
+        # Token 1 is the anchor (set to the truth).  Of the others, token 3 is now right and
+        # token 4 is now wrong.
+        result("balanced / anchors-random-5%", [10, 0, 20, 50, 500, 40], frozenset({1})),
+        result("balanced+other", [10, 10, 10, 10, 10, 10]),
+    ]
+    rows = anchor_effects(results, "balanced")
+    assert [(row["config"], row["language"]) for row in rows] == [
+        ("balanced / anchors-random-5%", "zh"),
+        ("balanced / anchors-random-5%", "all"),
+    ]
+    assert rows[0] == {
+        "config": "balanced / anchors-random-5%",
+        "language": "zh",
+        "tokens": 5,  # the anchor itself is not counted
+        "needs_fix_before_pct": 20.0,  # token 3, in the run without anchors
+        "needs_fix_after_pct": 20.0,  # token 4, after locking
+        "fixed": 1,
+        "broken": 1,
+    }
+    markdown, document = build_report(results, title="t", main_config="balanced")
+    assert "## 錨點對其餘 token 的影響" in markdown
+    assert "| `balanced / anchors-random-5%` | zh | 5 | 20.0% | 20.0% | 1 | 1 |" in markdown
+    assert document["anchor_effects"] == rows
+    # A run without an anchor experiment has no such section.
+    markdown, document = build_report(results[:1], title="t", main_config="balanced")
+    assert "錨點對其餘" not in markdown and document["anchor_effects"] == []
 
 
 def test_report_without_the_target_group_has_no_target_section() -> None:

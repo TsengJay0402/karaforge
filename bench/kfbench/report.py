@@ -109,6 +109,64 @@ def target_table(results: Sequence[RunResult], config: str, anchor_config: str |
     return lines
 
 
+def anchor_effects(results: Sequence[RunResult], main_config: str) -> list[dict[str, Any]]:
+    """What locking the anchors did to the *other* tokens, token by token.
+
+    The accuracy tables compare two different sets of tokens (the anchors are left out of
+    the anchored runs).  Here every unlocked token of an anchored run is paired with the same
+    token of the main configuration, which answers the question the anchor experiment is
+    about: did the user's corrections make the rest better or worse?
+
+    Returns:
+        One row per anchored configuration and language (plus ``all``): the number of
+        paired tokens, the share needing a fix before and after, and how many tokens went
+        from wrong to right (``fixed``) and from right to wrong (``broken``).
+    """
+    base = {
+        (result.item, outcome.line, outcome.index): outcome
+        for result in results
+        if result.config == main_config
+        for outcome in result.outcomes
+    }
+    rows: list[dict[str, Any]] = []
+    anchored = [
+        config
+        for config in dict.fromkeys(result.config for result in results)
+        if any(result.anchors for result in results if result.config == config)
+    ]
+    languages = list(dict.fromkeys(result.language for result in results))
+    for config in anchored:
+        for language in [*languages, "all"]:
+            tokens = before = after = fixed = broken = 0
+            for result in results:
+                if result.config != config or language not in ("all", result.language):
+                    continue
+                for outcome in result.outcomes:
+                    reference = base.get((result.item, outcome.line, outcome.index))
+                    if outcome.locked or reference is None:
+                        continue
+                    was_wrong = reference.start_error_ms > FIX_THRESHOLD_MS
+                    is_wrong = outcome.start_error_ms > FIX_THRESHOLD_MS
+                    tokens += 1
+                    before += was_wrong
+                    after += is_wrong
+                    fixed += was_wrong and not is_wrong
+                    broken += is_wrong and not was_wrong
+            if tokens:
+                rows.append(
+                    {
+                        "config": config,
+                        "language": language,
+                        "tokens": tokens,
+                        "needs_fix_before_pct": 100.0 * before / tokens,
+                        "needs_fix_after_pct": 100.0 * after / tokens,
+                        "fixed": fixed,
+                        "broken": broken,
+                    }
+                )
+    return rows
+
+
 def timing_rows(results: Sequence[RunResult]) -> list[dict[str, Any]]:
     """Mean compute time per stage, normalised to one minute of audio, per configuration."""
     rows: list[dict[str, Any]] = []
@@ -194,6 +252,27 @@ def build_report(
                     out.append(f"| `{config}` | {_row(summary)} |")
             out.append("")
 
+    effects = anchor_effects(results, main_config)
+    if effects:
+        out += [
+            "## 錨點對其餘 token 的影響(同一批 token,鎖定前 → 鎖定後)",
+            "",
+            f"每一列把錨點實驗裡沒有被鎖定的 token,與 `{main_config}`(沒有錨點)"
+            "裡的同一個 token 配對;"
+            f"「需修正」指起始時間誤差超過 {FIX_THRESHOLD_MS} ms。"
+            "「修好」是鎖定錨點後從需修正變成不需修正的 token 數,「弄壞」是反過來。",
+            "",
+            "| 設定 | 語言 | tokens | 鎖定前需修正 | 鎖定後需修正 | 修好 | 弄壞 |",
+            "|---|---|---:|---:|---:|---:|---:|",
+        ]
+        out += [
+            f"| `{row['config']}` | {row['language']} | {row['tokens']} | "
+            f"{row['needs_fix_before_pct']:.1f}% | {row['needs_fix_after_pct']:.1f}% | "
+            f"{row['fixed']} | {row['broken']} |"
+            for row in effects
+        ]
+        out.append("")
+
     out += [
         "## 結束時間(行尾長音)與信心度",
         "",
@@ -242,6 +321,7 @@ def build_report(
         "targets": TARGETS,
         "notes": list(notes),
         "summaries": rows,
+        "anchor_effects": effects,
         "timing": timings,
         "runs": [
             {

@@ -30,8 +30,12 @@ jobs:
       - run: uv run --no-sync pyright
 
   python-tests:
-    name: Python unit tests
+    name: Python unit tests (${{ matrix.python }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - name: Install ffmpeg (with libass)
@@ -40,12 +44,13 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          python-version: ${{ matrix.python }}
       - run: uv sync --extra cpu --frozen
       - name: Unit tests (no model weights needed)
         run: uv run --no-sync pytest -m "not models and not docker and not gpu" --cov --cov-report=xml --cov-report=term
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage-unit
+          name: coverage-unit-${{ matrix.python }}
           path: coverage.xml
 
   integration:

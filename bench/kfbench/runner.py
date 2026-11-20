@@ -42,6 +42,9 @@ class BenchConfig:
     anchors: AnchorMode = "none"
     anchor_share: float = 0.05
     """Share of tokens set to the truth and locked, for the anchor experiment."""
+    anchor_seed: str | None = None
+    """Name that seeds the random choice of anchors (default: the configuration's own name).
+    Two configurations with the same seed name lock exactly the same tokens."""
 
 
 @dataclass(frozen=True)
@@ -211,7 +214,10 @@ def run_config(
     if config.anchors != "none":
         baseline = collect_outcomes(store.load(), truth, item.song_id)
         anchors = choose_anchors(
-            baseline, config.anchors, config.anchor_share, f"{item.key}/{config.name}"
+            baseline,
+            config.anchors,
+            config.anchor_share,
+            f"{item.key}/{config.anchor_seed or config.name}",
         )
         lock_to_truth(store, truth, anchors)
         report = run_pipeline(store, profile=profile, cancel=cancel)

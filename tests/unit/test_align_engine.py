@@ -35,6 +35,7 @@ def run_fine(
     pad_s: float = 1.0,
     max_window_s: float | None = None,
     features: VocalFeatures | None = None,
+    anchor_context: bool = True,
 ) -> list[list[TokenTiming]]:
     return fine_align(
         lines,
@@ -47,6 +48,7 @@ def run_fine(
         cancel=CancelToken(),
         max_window_s=max_window_s,
         features=features,
+        anchor_context=anchor_context,
     )
 
 
@@ -70,24 +72,63 @@ def test_window_is_clamped_to_the_audio() -> None:
     assert aligner.requests[0].audio.size == 60 * MODEL_RATE
 
 
-def test_locked_tokens_split_the_line_into_bounded_runs() -> None:
+def test_tokens_next_to_a_lock_are_aligned_together_with_it() -> None:
     aligner = FakeAligner()
     line = lyric_line("L1", "一二三四五六", locked={2: (12.0, 12.4), 5: (15.0, 15.8)})
     result = run_fine([line], [window(10.0, 16.0, 6)], aligner)[0]
+    # The locked tokens are exactly where the user put them.
     assert [(token.start_s, token.end_s, token.locked) for token in (result[2], result[5])] == [
         (12.0, 12.4, True),
         (15.0, 15.8, True),
     ]
-    # Run 1: tokens 0-1 from the window start (10 - 1 s pad) up to the first lock.
+    first, second = aligner.requests
+    # Run 1 (tokens 0-1): from the window start (10 - 1 s pad) to the end of the lock that
+    # follows, and the locked token is part of the text.
+    assert [unit.text for unit in first.units] == ["一", "二", "三"]
+    assert first.offset_s == pytest.approx(9.0)
+    assert first.audio.size / MODEL_RATE == pytest.approx(3.4)
+    # Run 2 (tokens 3-4): from the start of the lock before it to the end of the lock after.
+    assert [unit.text for unit in second.units] == ["三", "四", "五", "六"]
+    assert second.offset_s == pytest.approx(12.0)
+    assert second.audio.size / MODEL_RATE == pytest.approx(3.8)
+    assert not (second.open_start or second.open_end)
+    assert second.prefix_units == () and second.suffix_units == ()
+    # Only the run's own timings are used (the fake aligner spaces its units evenly) ...
+    assert [token.start_s for token in result[3:5]] == pytest.approx([12.95, 13.9])
+    assert all(not token.locked for token in (*result[:2], *result[3:5]))
+    # ... and they stay between the starts of the locks around them.
+    assert all(9.0 <= token.start_s <= 12.0 for token in result[:2])
+    assert all(12.0 < token.start_s <= 15.0 for token in result[3:5])
+
+
+def test_a_very_short_lock_after_a_run_still_gets_some_audio() -> None:
+    aligner = FakeAligner()
+    line = lyric_line("L1", "一二三", locked={2: (12.0, 12.05)})
+    run_fine([line], [window(10.0, 12.05, 3)], aligner)
+    # 0.3 s after the start of the locked token, not just its 50 ms.
+    assert aligner.requests[0].audio.size / MODEL_RATE == pytest.approx(3.3)
+
+
+def test_cutting_at_the_locks_is_still_available_for_comparison() -> None:
+    aligner = FakeAligner()
+    line = lyric_line("L1", "一二三四五六", locked={2: (12.0, 12.4), 5: (15.0, 15.8)})
+    result = run_fine([line], [window(10.0, 16.0, 6)], aligner, anchor_context=False)[0]
+    # Run 1: tokens 0-1 from the window start up to the first lock.
+    assert [unit.text for unit in aligner.requests[0].units] == ["一", "二"]
     assert aligner.requests[0].audio.size / MODEL_RATE == pytest.approx(3.0)
-    assert aligner.requests[0].open_start is False  # no other line before it
-    assert aligner.requests[0].open_end is False
     # Run 2: tokens 3-4 strictly between the two locks.
     assert aligner.requests[1].audio.size / MODEL_RATE == pytest.approx(2.6)
-    assert aligner.requests[1].open_start is False
-    assert aligner.requests[1].open_end is False
     assert [token.start_s for token in result[3:5]] == pytest.approx([12.4, 13.7])
-    assert all(9.0 <= token.start_s <= 12.0 for token in result[:2])
+    assert not any(request.open_start or request.open_end for request in aligner.requests)
+
+
+def test_a_window_too_long_for_the_aligner_falls_back_to_cutting() -> None:
+    aligner = FakeAligner()
+    line = lyric_line("L1", "一二三四", locked={0: (10.0, 10.4), 3: (20.0, 26.0)})
+    run_fine([line], [window(10.0, 26.0, 4)], aligner, max_window_s=12.0)
+    # With the locks included the audio would be 16 s; between them it is 9.6 s.
+    assert [unit.text for unit in aligner.requests[0].units] == ["二", "三"]
+    assert aligner.requests[0].audio.size / MODEL_RATE == pytest.approx(9.6)
 
 
 def test_locks_in_other_lines_bound_the_window() -> None:
@@ -106,12 +147,24 @@ def test_locks_in_other_lines_bound_the_window() -> None:
 
 def test_run_without_room_is_spread_evenly_and_flagged() -> None:
     aligner = FakeAligner()
-    line = lyric_line("L1", "一二三四", locked={0: (10.0, 10.5), 3: (10.52, 11.0)})
+    # Two tokens would have to start within 50 ms: between the *starts* of the two locks.
+    line = lyric_line("L1", "一二三四", locked={0: (10.0, 10.5), 3: (10.05, 11.0)})
     result = run_fine([line], [window(10.0, 11.0, 4)], aligner)[0]
     assert aligner.requests == []
     assert [token.estimated for token in result] == [False, True, True, False]
-    assert [token.start_s for token in result[1:3]] == pytest.approx([10.5, 10.51])
+    assert [token.start_s for token in result[1:3]] == pytest.approx([10.03, 10.04])
     assert all(token.score == 0.0 for token in result[1:3])
+
+
+def test_a_lock_that_ends_late_does_not_push_its_neighbours() -> None:
+    aligner = FakeAligner()
+    # The first lock is said to last until 10.5 s although the next token is sung earlier:
+    # where a token starts is what the user marked, its end is only a by-product.
+    line = lyric_line("L1", "一二三四", locked={0: (10.0, 10.5), 3: (10.52, 11.0)})
+    result = run_fine([line], [window(10.0, 11.0, 4)], aligner)[0]
+    assert [unit.text for unit in aligner.requests[0].units] == ["一", "二", "三", "四"]
+    assert not any(token.estimated for token in result)
+    assert 10.0 < result[1].start_s < 10.5
 
 
 def test_punctuation_only_tokens_are_not_sent_to_the_aligner() -> None:

@@ -78,6 +78,21 @@ class AlignSettings(_Settings):
     context_tokens: int = Field(default=4, ge=0, le=16)
     """How many tokens of the neighbouring lines are given to the aligner as context when
     their sound may be inside a line's padded window (0 = none)."""
+    anchor_context: bool = True
+    """How locked tokens (the user's corrections) are used when aligning again.
+
+    ``True``:
+
+    * a line with locked tokens gets its time window from the locks *and* from the
+      recognised words that agree with them;
+    * the tokens next to a locked token are aligned together with it: the audio given to the
+      aligner starts where the locked token starts (and reaches past the start of a locked
+      token that follows), and the locked token is part of the text.
+
+    ``False`` is what version 7 of the algorithm did — the window from the locks alone, the
+    audio cut at the edges of the locked tokens.  The benchmark showed that this makes the
+    neighbours of an anchor *worse*; it is kept so that the comparison can be repeated.
+    """
     lead_ms: int | None = Field(default=None, ge=-500, le=500)
     """Constant subtracted from every start the aligner reports, before refinement.
 
