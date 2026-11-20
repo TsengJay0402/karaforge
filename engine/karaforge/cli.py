@@ -772,6 +772,70 @@ def bench_command(
     )
 
 
+@app.command("ruby")
+def ruby_command(
+    project: Annotated[Path, typer.Argument(help="專案資料夾 / project folder.")],
+    kind: Annotated[
+        str | None,
+        typer.Option("--kind", "-k", help="zhuyin(注音)或 pinyin(拼音);省略則沿用目前的。"),
+    ] = None,
+    clear: Annotated[
+        bool, typer.Option("--clear", help="移除自動讀音 / remove the automatic readings.")
+    ] = False,
+) -> None:
+    """產生注音或拼音 / give Chinese lyrics their readings (zhuyin or pinyin).
+
+    手動指定的讀音不會被更動。要不要顯示由主題的 ruby.enabled 決定。
+    """
+    from karaforge.text.ruby import KINDS, annotate_project, clear_project, default_kind, kind_of
+
+    store = open_project(project)
+    document = store.load()
+    if clear:
+        removed = clear_project(document)
+        store.save(document)
+        console.print(
+            pick(f"已移除 {removed} 個自動讀音。", f"Removed {removed} automatic readings.")
+        )
+        return
+    chosen = kind.strip().lower() if kind else None
+    if chosen is not None and chosen not in KINDS:
+        raise ProjectError(
+            f"沒有這種讀音:{kind}",
+            f"Unknown kind of reading: {kind}",
+            hint_zh="可用:zhuyin(注音)、pinyin(拼音)。",
+            hint_en="Use zhuyin or pinyin.",
+        )
+    resolved = chosen or kind_of(document.lines) or default_kind(document.meta.language)
+    if resolved is None:
+        raise ProjectError(
+            f"這個專案的語言是 {document.meta.language},不會自動產生國語讀音。",
+            f"The project language is {document.meta.language}; Mandarin readings are not "
+            "generated for it automatically.",
+            hint_zh="如果歌詞確實是國語,請加上 --kind zhuyin 或 --kind pinyin。",
+            hint_en="If the lyrics are Mandarin after all, pass --kind zhuyin or --kind pinyin.",
+        )
+    count = annotate_project(document, "zhuyin" if resolved == "zhuyin" else "pinyin")
+    manual = sum(token.ruby_source == "manual" for item in document.lines for token in item.tokens)
+    store.save(document)
+    label = pick("注音", "zhuyin") if resolved == "zhuyin" else pick("拼音", "pinyin")
+    console.print(
+        pick(
+            f"已為 {count} 個字標上{label}(另有 {manual} 個手動讀音維持不變)。",
+            f"{count} characters now have {label} readings ({manual} manual readings were kept).",
+        )
+    )
+    console.print(
+        pick(
+            "[dim]破音字不一定正確(見 docs/ruby.md);可在歌詞裡用 字{讀音} 或在編輯器修正。"
+            "顯示與否由主題的 ruby.enabled 決定。[/dim]",
+            "[dim]Polyphonic characters may be wrong (see docs/ruby.md); correct them with "
+            "char{reading} in the lyrics or in the editor.  The theme's ruby.enabled decides "
+            "whether readings are shown.[/dim]",
+        )
+    )
+
+
 @app.command("doctor")
 def doctor_command(
     models: Annotated[

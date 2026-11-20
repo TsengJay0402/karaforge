@@ -7,6 +7,7 @@ export interface TokenData {
   locked: boolean
   source: string
   ruby: string | null
+  ruby_source: 'auto' | 'manual' | null
 }
 
 export interface ProjectData {

@@ -35,6 +35,14 @@ from karaforge.project.store import ProjectStore
 from karaforge.server.events import EventBus
 from karaforge.server.jobs import FINISHED, Job, JobManager
 from karaforge.server.workspace import ProjectNotFoundError, Workspace
+from karaforge.text.ruby import (
+    annotate_line,
+    annotate_project,
+    clear_line,
+    kind_of,
+    uses_taiwan_readings,
+)
+from karaforge.text.script import script_config
 
 MEDIA_NAMES = ("source", "audio", "vocals", "instrumental")
 STEMS = ("audio", "vocals", "instrumental")
@@ -76,6 +84,15 @@ class RetokenizeBody(BaseModel):
 
     line: dict[str, Any]
     text: str
+    language: str | None = None
+
+
+class RubyBody(BaseModel):
+    """Lines to give automatic readings to (or to take them from, with ``none``)."""
+
+    lines: list[dict[str, Any]]
+    kind: Literal["zhuyin", "pinyin", "none"] = "zhuyin"
+    language: str = "zh-TW"
 
 
 class PreviewBody(BaseModel):
@@ -322,8 +339,10 @@ def create_app(settings: ServerSettings) -> FastAPI:
         project = store.load()
         parsed.apply_meta(project.meta)
         project.singers = parsed.singers
+        kind = kind_of(project.lines)
         project.lines = parsed.lines
         project.meta.lyrics_source = "user"
+        annotate_project(project, kind)
         store.save(project, expected_revision=body.revision)
         _project_changed(project_id, "saved")
         return {
@@ -353,7 +372,27 @@ def create_app(settings: ServerSettings) -> FastAPI:
             raise ProjectError(
                 "這一行的內容不符合格式。", "The line is not valid.", detail=str(error)
             ) from error
-        return {"line": retokenize_line(line, body.text).model_dump(mode="json")}
+        edited = retokenize_line(line, body.text, language=body.language)
+        return {"line": edited.model_dump(mode="json")}
+
+    @app.post("/api/tools/ruby")
+    def ruby_readings(body: RubyBody) -> dict[str, Any]:
+        """Automatic readings for a set of lines (the editor applies them as one edit)."""
+        try:
+            lines = [Line.model_validate(item) for item in body.lines]
+        except ValueError as error:
+            raise ProjectError(
+                "送來的歌詞行不符合格式。", "The lines are not valid.", detail=str(error)
+            ) from error
+        if body.kind == "none":
+            return {"lines": [clear_line(line).model_dump(mode="json") for line in lines]}
+        taiwan = uses_taiwan_readings(body.language) or script_config(body.language) is None
+        return {
+            "lines": [
+                annotate_line(line, body.kind, taiwan=taiwan).model_dump(mode="json")
+                for line in lines
+            ]
+        }
 
     # ------------------------------------------------------------------------- media
 

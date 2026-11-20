@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 
 from karaforge.io.importers.lyrics_txt import tokens_from_text
 from karaforge.project.schema import Line, Token
+from karaforge.text.ruby import annotate_line, kind_of, uses_taiwan_readings
 from karaforge.text.tokenize import core_of
 
 EDITED_CONFIDENCE = 0.2
@@ -39,7 +40,7 @@ def _spread(tokens: list[Token], start_ms: int, end_ms: int) -> list[Token]:
     return spread
 
 
-def retokenize_line(line: Line, text: str) -> Line:
+def retokenize_line(line: Line, text: str, *, language: str | None = None) -> Line:
     """Replace the text of a line, keeping the timing of everything that is still there.
 
     The old and the new token sequences are compared with a diff:
@@ -54,9 +55,14 @@ def retokenize_line(line: Line, text: str) -> Line:
       and are left without a time otherwise (the layout draws them, the next alignment
       places them).
 
+    A line that carried automatic readings (zhuyin / pinyin) gets them again for its new
+    text, in the same kind; readings given by hand are kept.
+
     Args:
         line: The line as it is.
         text: Its new text, in the lyrics-file syntax (``字{reading}`` sets a reading).
+        language: Project language; decides between Taiwan and Mainland readings.  Without
+            it, zhuyin implies Taiwan readings.
 
     Returns:
         A new line with the same id, singer, paragraph and time hint.
@@ -108,4 +114,9 @@ def retokenize_line(line: Line, text: str) -> Line:
             else:
                 result.extend(after)
         # "delete": the tokens are simply gone.
-    return line.model_copy(update={"tokens": result})
+    edited = line.model_copy(update={"tokens": result})
+    kind = kind_of([line])
+    if kind is not None:
+        taiwan = uses_taiwan_readings(language) if language else kind == "zhuyin"
+        edited = annotate_line(edited, kind, taiwan=taiwan)
+    return edited

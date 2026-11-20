@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from karaforge.project import Line, Token
 from karaforge.project.edit import EDITED_CONFIDENCE, retokenize_line
+from karaforge.text.ruby import annotate_line
 from support import timed_line
 
 
@@ -21,7 +22,7 @@ def test_unchanged_text_keeps_everything() -> None:
 def test_corrected_character_keeps_its_time_but_not_its_reading() -> None:
     line = timed_line("L001", "夜空裏的星星", 10_000, 400)
     line.tokens[2] = line.tokens[2].model_copy(
-        update={"ruby": "ㄌㄧˇ", "ruby_source": "auto", "locked": True}
+        update={"ruby": "ㄌㄧˇ", "ruby_source": "manual", "locked": True}
     )
     edited = retokenize_line(line, "夜空裡的星星")
     assert times(edited) == [
@@ -32,9 +33,42 @@ def test_corrected_character_keeps_its_time_but_not_its_reading() -> None:
         ("星", 11_600, 12_000),
         ("星", 12_000, 12_400),
     ]
+    # The reading typed for the old character does not carry over to the new one, and a
+    # line that had no automatic readings does not get any.
     fixed = edited.tokens[2]
-    assert fixed.ruby is None and fixed.locked is True
+    assert fixed.ruby is None and fixed.ruby_source is None and fixed.locked is True
+    assert all(token.ruby is None for token in edited.tokens)
     assert edited.tokens[0].confidence == 0.9
+
+
+def rubies(line: Line) -> list[str | None]:
+    return [token.ruby for token in line.tokens]
+
+
+def test_automatic_readings_follow_the_new_text() -> None:
+    line = annotate_line(timed_line("L001", "我們去銀行", 10_000, 400), "zhuyin")
+    assert rubies(line) == ["ㄨㄛˇ", "˙ㄇㄣ", "ㄑㄩˋ", "ㄧㄣˊ", "ㄏㄤˊ"]
+    edited = retokenize_line(line, "我們去旅行")
+    # 行 is the same character and keeps its time, but its reading depends on the word.
+    assert rubies(edited) == ["ㄨㄛˇ", "˙ㄇㄣ", "ㄑㄩˋ", "ㄌㄩˇ", "ㄒㄧㄥˊ"]
+    assert all(token.ruby_source == "auto" for token in edited.tokens)
+    assert times(edited)[4] == ("行", 11_600, 12_000)
+
+    # A reading typed in the text wins over the automatic one.
+    typed = retokenize_line(line, "我們去銀行{ㄒㄧㄥˊ}")
+    assert (typed.tokens[4].ruby, typed.tokens[4].ruby_source) == ("ㄒㄧㄥˊ", "manual")
+    assert typed.tokens[3].ruby_source == "auto"
+
+
+def test_readings_stay_in_their_kind_and_follow_the_language() -> None:
+    line = annotate_line(timed_line("L001", "寂寞", 0, 400), "pinyin", taiwan=True)
+    assert rubies(line) == ["jí", "mò"]
+    assert rubies(retokenize_line(line, "寂寞的", language="zh-TW")) == ["jí", "mò", "de"]
+    assert rubies(retokenize_line(line, "寂寞的", language="zh-CN")) == ["jì", "mò", "de"]
+    # Without a language, pinyin is taken to mean Mainland readings and zhuyin Taiwan ones.
+    assert rubies(retokenize_line(line, "寂寞的")) == ["jì", "mò", "de"]
+    zhuyin = annotate_line(timed_line("L001", "寂寞", 0, 400), "zhuyin", taiwan=False)
+    assert rubies(retokenize_line(zhuyin, "寂寞的")) == ["ㄐㄧˊ", "ㄇㄛˋ", "˙ㄉㄜ"]
 
 
 def test_punctuation_and_spacing_changes_do_not_touch_the_timing() -> None:

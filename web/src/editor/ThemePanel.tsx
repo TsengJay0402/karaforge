@@ -10,6 +10,7 @@ import type { Theme } from '../api/types.ts'
 import { ErrorBox, Spinner } from '../components/common.tsx'
 import { type MessageKey, useT } from '../i18n/index.ts'
 import { useEditor, useEditorState } from './context.ts'
+import { applyReadings, readingKind } from './doc.ts'
 import { applyOverrides, getPath } from './paths.ts'
 
 const SLOTS = ['male', 'female', 'duet'] as const
@@ -34,6 +35,10 @@ export function ThemePanel({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
   const [failure, setFailure] = useState<unknown>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  const language = useEditorState((state) => state.history.present.meta.language)
+  const existingKind = useEditorState((state) => readingKind(state.history.present))
+  const [chosenKind, setChosenKind] = useState<'zhuyin' | 'pinyin' | null>(null)
+  const [readingsDone, setReadingsDone] = useState<number | null>(null)
 
   const entry = themes.data?.find((item) => item.name === style.theme)
   const base = entry?.theme ?? null
@@ -122,6 +127,24 @@ export function ThemePanel({ onClose }: { onClose: () => void }) {
       {label}
     </label>
   )
+
+  const kind = chosenKind ?? existingKind ?? (language.toLowerCase().startsWith('zh-cn') ? 'pinyin' : 'zhuyin')
+  const readings = async (wanted: 'zhuyin' | 'pinyin' | 'none') => {
+    try {
+      setFailure(null)
+      const annotated = await api.readings(store.getState().history.present.lines, wanted, language)
+      let count = 0
+      edit(
+        (draft) => {
+          count = applyReadings(draft, annotated)
+        },
+        { label: 'ruby' },
+      )
+      setReadingsDone(count)
+    } catch (cause) {
+      setFailure(cause)
+    }
+  }
 
   const saveAs = async () => {
     try {
@@ -221,7 +244,37 @@ export function ThemePanel({ onClose }: { onClose: () => void }) {
       </fieldset>
 
       <fieldset>
+        <legend>{t('theme.readings')}</legend>
         {toggle('ruby.enabled', t('theme.ruby'))}
+        <label>
+          {t('theme.readings.kind')}
+          <select
+            value={kind}
+            disabled={readOnly}
+            data-testid="readings-kind"
+            onChange={(event) => setChosenKind(event.target.value === 'pinyin' ? 'pinyin' : 'zhuyin')}
+          >
+            <option value="zhuyin">{t('theme.readings.zhuyin')}</option>
+            <option value="pinyin">{t('theme.readings.pinyin')}</option>
+          </select>
+        </label>
+        <div className="button-row">
+          <button type="button" disabled={readOnly} data-testid="readings-generate" onClick={() => void readings(kind)}>
+            {t('theme.readings.generate')}
+          </button>
+          <button type="button" disabled={readOnly} data-testid="readings-clear" onClick={() => void readings('none')}>
+            {t('theme.readings.clear')}
+          </button>
+        </div>
+        {readingsDone === null ? null : (
+          <p className="hint" data-testid="readings-done">
+            {t('theme.readings.done', { count: readingsDone })}
+          </p>
+        )}
+        <p className="hint">{t('theme.readings.hint')}</p>
+      </fieldset>
+
+      <fieldset>
         {toggle('countdown.enabled', t('theme.countdown'))}
         {toggle('title_card.enabled', t('theme.titleCard'))}
       </fieldset>

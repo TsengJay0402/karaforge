@@ -1044,3 +1044,9 @@ progress {
     border-top: 1px solid var(--border);
   }
 }
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}

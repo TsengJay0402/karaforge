@@ -245,3 +245,72 @@ test('a draft made by speech recognition is announced until it is acknowledged',
     await mark('user', revision)
   }
 })
+
+test('readings are generated, shown when the theme asks for them, and switched to pinyin', async ({ page, request }) => {
+  await openEditor(page, 'demo')
+  // The theme panel takes the place of the lyrics, so it is opened and closed as needed.
+  const openTheme = async () => {
+    await page.getByRole('button', { name: '主題', exact: true }).click()
+    await expect(page.getByTestId('theme-panel')).toBeVisible()
+  }
+  const closeTheme = async () => {
+    await page.getByTestId('theme-panel').getByRole('button', { name: '關閉' }).click()
+    await expect(page.getByTestId('token-0-0')).toBeVisible()
+  }
+  const reading = page.getByTestId('token-0-0').locator('rt')
+
+  await openTheme()
+  await page.getByTestId('readings-generate').click()
+  await expect(page.getByTestId('readings-done')).toHaveText('已更新 4 行的讀音。')
+  await waitSaved(page)
+  const first = (await serverProject(request, 'demo')).lines[0]!.tokens[0]!
+  expect(first).toMatchObject({ text: '車', ruby: 'ㄔㄜ', ruby_source: 'auto' })
+  // Stored, but not shown in the lyrics until the theme displays readings.
+  await closeTheme()
+  await expect(reading).toHaveCount(0)
+
+  await openTheme()
+  const rendered = page.waitForResponse(
+    (response) => response.url().endsWith('/api/projects/demo/preview') && response.request().method() === 'POST',
+  )
+  await page.getByLabel('顯示注音／拼音').check()
+  const preview = (await (await rendered).json()) as { ass: string }
+  expect(preview.ass).toContain('ㄔㄜ')
+  await closeTheme()
+  await expect(reading).toHaveText('ㄔㄜ')
+  await page.evaluate(() => window.karaforge?.seek(6200))
+  await page.waitForTimeout(800)
+  await page.getByTestId('preview-stage').screenshot({ path: 'test-results/readings-zhuyin.png' })
+
+  await openTheme()
+  await page.getByTestId('readings-kind').selectOption('pinyin')
+  await page.getByTestId('readings-generate').click()
+  await closeTheme()
+  await expect(reading).toHaveText('chē')
+  await page.waitForTimeout(800)
+  await page.getByTestId('preview-stage').screenshot({ path: 'test-results/readings-pinyin.png' })
+
+  // A reading typed by hand survives regeneration and clearing.
+  await page.getByTestId('token-0-0').click()
+  await page.getByTestId('token-ruby').fill('ㄐㄩ')
+  await openTheme()
+  await page.getByTestId('readings-generate').click()
+  await page.getByTestId('readings-clear').click()
+  await closeTheme()
+  await expect(page.getByTestId('token-0-1').locator('rt')).toHaveCount(0)
+  await expect(reading).toHaveText('ㄐㄩ')
+  await waitSaved(page)
+  const stored = (await serverProject(request, 'demo')).lines[0]!.tokens
+  expect(stored[0]).toMatchObject({ ruby: 'ㄐㄩ', ruby_source: 'manual' })
+  expect(stored[1]).toMatchObject({ ruby: null, ruby_source: null })
+
+  // Leave the project as it was.
+  await page.getByTestId('token-0-0').click()
+  await page.getByTestId('token-ruby').fill('')
+  await openTheme()
+  await page.getByRole('button', { name: '還原成主題的預設值' }).click()
+  await waitSaved(page)
+  const after = await serverProject(request, 'demo')
+  expect(after.style.overrides).toEqual({})
+  expect(after.lines[0]!.tokens[0]!.ruby).toBeNull()
+})

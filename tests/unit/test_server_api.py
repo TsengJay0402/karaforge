@@ -470,3 +470,66 @@ def test_project_stats_count_timed_locked_and_doubtful_tokens() -> None:
     assert (stats.lines, stats.tokens, stats.timed_tokens) == (1, 4, 3)
     assert (stats.locked_tokens, stats.low_confidence) == (1, 1)
     assert json.dumps(stats.__dict__)
+
+
+def test_readings_tool_annotates_switches_and_clears(client: TestClient) -> None:
+    lines = [
+        {
+            "id": "L001",
+            "tokens": [
+                {"text": "寂"},
+                {"text": "寞"},
+                {"text": "的 "},
+                {"text": "night"},
+                {"text": "行", "ruby": "ㄏㄤˊ", "ruby_source": "manual"},
+            ],
+        }
+    ]
+
+    def rubies(payload: dict[str, Any]) -> list[tuple[str | None, str | None]]:
+        return [(token["ruby"], token["ruby_source"]) for token in payload["lines"][0]["tokens"]]
+
+    zhuyin = client.post("/api/tools/ruby", json={"lines": lines, "kind": "zhuyin"}).json()
+    assert rubies(zhuyin) == [
+        ("ㄐㄧˊ", "auto"),
+        ("ㄇㄛˋ", "auto"),
+        ("˙ㄉㄜ", "auto"),
+        (None, None),
+        ("ㄏㄤˊ", "manual"),
+    ]
+    mainland = client.post(
+        "/api/tools/ruby", json={"lines": zhuyin["lines"], "kind": "pinyin", "language": "zh-CN"}
+    ).json()
+    assert rubies(mainland)[:3] == [("jì", "auto"), ("mò", "auto"), ("de", "auto")]
+    assert rubies(mainland)[4] == ("ㄏㄤˊ", "manual")
+    cleared = client.post("/api/tools/ruby", json={"lines": mainland["lines"], "kind": "none"})
+    assert rubies(cleared.json()) == [(None, None)] * 4 + [("ㄏㄤˊ", "manual")]
+
+    assert client.post("/api/tools/ruby", json={"lines": [{"id": ""}]}).status_code == 400
+    assert client.post("/api/tools/ruby", json={"lines": lines, "kind": "kana"}).status_code == 422
+
+
+def test_lyrics_get_readings_when_they_enter_a_project(api: Api) -> None:
+    store = make_project(api)
+    revision = store.current_revision()
+    response = api.client.put(
+        "/api/projects/demo/lyrics",
+        json={"text": "我們去銀行\nhello 世界", "filename": "lyrics.txt", "revision": revision},
+    )
+    assert response.status_code == 200, response.text
+    project = store.load()
+    assert [token.ruby for token in project.lines[0].tokens] == [
+        "ㄨㄛˇ",
+        "˙ㄇㄣ",
+        "ㄑㄩˋ",
+        "ㄧㄣˊ",
+        "ㄏㄤˊ",
+    ]
+    assert [token.ruby for token in project.lines[1].tokens] == [None, "ㄕˋ", "ㄐㄧㄝˋ"]
+
+    # An edited line keeps its readings up to date; the language picks the regional reading.
+    line = project.lines[0].model_dump(mode="json")
+    edited = api.client.post(
+        "/api/tools/retokenize", json={"line": line, "text": "我們去旅行", "language": "zh-TW"}
+    ).json()["line"]
+    assert [token["ruby"] for token in edited["tokens"]][3:] == ["ㄌㄩˇ", "ㄒㄧㄥˊ"]

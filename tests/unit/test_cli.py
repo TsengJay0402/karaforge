@@ -453,3 +453,58 @@ def test_batch_needs_a_folder_with_media(tmp_path: Path) -> None:
     assert isinstance(result.exception, ProjectError)
     result = runner.invoke(cli.app, ["batch", str(tmp_path / "nowhere"), "--out", str(tmp_path)])
     assert isinstance(result.exception, MediaError)
+
+
+def test_new_projects_get_readings_by_language(media: Path, tmp_path: Path) -> None:
+    chinese = tmp_path / "zh.txt"
+    chinese.write_text("我們去銀行{ㄏㄤˊ}\n", encoding="utf-8")
+    store = create_project(media, tmp_path / "zh.kfproj", lyrics=chinese)
+    tokens = store.load().lines[0].tokens
+    assert [token.ruby for token in tokens] == ["ㄨㄛˇ", "˙ㄇㄣ", "ㄑㄩˋ", "ㄧㄣˊ", "ㄏㄤˊ"]
+    assert [token.ruby_source for token in tokens] == ["auto"] * 4 + ["manual"]
+
+    japanese = create_project(media, tmp_path / "ja.kfproj", lyrics=chinese, language="ja")
+    assert [token.ruby for token in japanese.load().lines[0].tokens][:4] == [None] * 4
+
+
+def test_ruby_command_switches_kind_and_clears(
+    media: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lyrics_file = tmp_path / "zh.txt"
+    lyrics_file.write_text("寂寞的行{ㄏㄤˊ}\n", encoding="utf-8")
+    root = tmp_path / "song.kfproj"
+    store = create_project(media, root, lyrics=lyrics_file)
+    monkeypatch.setenv("KARAFORGE_LANG", "en")
+
+    def rubies() -> list[str | None]:
+        return [token.ruby for token in store.load().lines[0].tokens]
+
+    assert rubies() == ["ㄐㄧˊ", "ㄇㄛˋ", "˙ㄉㄜ", "ㄏㄤˊ"]
+    result = runner.invoke(cli.app, ["ruby", str(root), "--kind", "pinyin"])
+    assert result.exit_code == 0, result.output
+    assert "3 characters now have pinyin readings (1 manual readings were kept)" in result.output
+    assert rubies() == ["jí", "mò", "de", "ㄏㄤˊ"]
+    # Without --kind the project keeps what it has.
+    assert runner.invoke(cli.app, ["ruby", str(root)]).exit_code == 0
+    assert rubies() == ["jí", "mò", "de", "ㄏㄤˊ"]
+
+    result = runner.invoke(cli.app, ["ruby", str(root), "--clear"])
+    assert "Removed 3 automatic readings" in result.output
+    assert rubies() == [None, None, None, "ㄏㄤˊ"]
+    assert runner.invoke(cli.app, ["ruby", str(root), "--kind", "zhuyin"]).exit_code == 0
+    assert rubies() == ["ㄐㄧˊ", "ㄇㄛˋ", "˙ㄉㄜ", "ㄏㄤˊ"]
+
+    result = runner.invoke(cli.app, ["ruby", str(root), "--kind", "kana"])
+    assert isinstance(result.exception, ProjectError)
+
+
+def test_ruby_command_needs_a_kind_for_other_languages(media: Path, tmp_path: Path) -> None:
+    lyrics_file = tmp_path / "ja.txt"
+    lyrics_file.write_text("夜空\n", encoding="utf-8")
+    root = tmp_path / "ja.kfproj"
+    store = create_project(media, root, lyrics=lyrics_file, language="ja")
+    result = runner.invoke(cli.app, ["ruby", str(root)])
+    assert isinstance(result.exception, ProjectError)
+    assert "--kind" in (result.exception.hint_en or "")
+    assert runner.invoke(cli.app, ["ruby", str(root), "--kind", "pinyin"]).exit_code == 0
+    assert [token.ruby for token in store.load().lines[0].tokens] == ["yè", "kōng"]

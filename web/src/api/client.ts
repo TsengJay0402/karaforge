@@ -164,8 +164,12 @@ export const api = {
     await request(project(id), { method: 'DELETE' })
   },
 
-  retokenize: async (line: Line, text: string) =>
-    (await sendJson<{ line: Line }>('POST', '/api/tools/retokenize', { line, text })).line,
+  retokenize: async (line: Line, text: string, language?: string) =>
+    (await sendJson<{ line: Line }>('POST', '/api/tools/retokenize', { line, text, language })).line,
+
+  /** Automatic readings for `lines`; `none` removes them.  Manual readings are kept. */
+  readings: async (lines: Line[], kind: 'zhuyin' | 'pinyin' | 'none', language: string) =>
+    (await sendJson<{ lines: Line[] }>('POST', '/api/tools/ruby', { lines, kind, language })).lines,
 
   preview: (id: string, doc: Project | null, resolution?: [number, number]) =>
     sendJson<PreviewResult>('POST', `${project(id)}/preview`, {

@@ -267,6 +267,42 @@ export function setSinger(project: Project, lineIndex: number, singerId: string)
   if (line && project.singers.some((singer) => singer.id === singerId)) line.singer = singerId
 }
 
+/** Which kind the automatic readings of a project are in, if it has any. */
+export function readingKind(project: Project): 'zhuyin' | 'pinyin' | null {
+  let found: 'pinyin' | null = null
+  for (const line of project.lines) {
+    for (const token of line.tokens) {
+      if (!token.ruby || token.ruby_source !== 'auto') continue
+      if (/[\u3105-\u312F]/.test(token.ruby)) return 'zhuyin'
+      found = 'pinyin'
+    }
+  }
+  return found
+}
+
+/**
+ * Take over the readings of `annotated` (the same lines, sent to the server a moment ago).
+ * A line whose text changed in the meantime is left alone; returns how many lines were
+ * updated.
+ */
+export function applyReadings(project: Project, annotated: Line[]): number {
+  const byId = new Map(annotated.map((line) => [line.id, line]))
+  let updated = 0
+  for (const line of project.lines) {
+    const source = byId.get(line.id)
+    if (source?.tokens.length !== line.tokens.length) continue
+    if (!line.tokens.every((token, index) => token.text === source.tokens[index]?.text)) continue
+    line.tokens.forEach((token, index) => {
+      const from = source.tokens[index]
+      if (!from) return
+      token.ruby = from.ruby
+      token.ruby_source = from.ruby_source
+    })
+    updated += 1
+  }
+  return updated
+}
+
 export function setRuby(project: Project, ref: TokenRef, ruby: string | null): void {
   const token = tokenAt(project, ref)
   if (!token) return

@@ -3,6 +3,7 @@ import { produce } from 'immer'
 import { project, timedLine, times, token } from '../test/fixtures.ts'
 import {
   allRefs,
+  applyReadings,
   clearTiming,
   deleteLine,
   insertLine,
@@ -14,6 +15,7 @@ import {
   nextRef,
   nudgeTokens,
   previousRef,
+  readingKind,
   refAtTime,
   setLocked,
   setRuby,
@@ -203,6 +205,49 @@ describe('batch operations', () => {
     expect(times(first.lines[0])[0]).toEqual(['夜', 0, 1400])
     // Untimed tokens and an empty nudge change nothing.
     expect(produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 0 }], 0))).toEqual(song())
+  })
+
+  it('takes over readings from the server unless the text changed meanwhile', () => {
+    const base = song()
+    expect(readingKind(base)).toBeNull()
+    const annotated = produce(base, (draft) => {
+      draft.lines[0]!.tokens.forEach((item, index) => {
+        item.ruby = ['ㄧㄝˋ', 'ㄎㄨㄥ', 'ㄌㄧˇ'][index] ?? null
+        item.ruby_source = 'auto'
+      })
+      draft.lines[1]!.tokens[0]!.ruby = 'x'
+      draft.lines[1]!.tokens[0]!.ruby_source = 'auto'
+    })
+    // The second line was edited while the request was under way: it is skipped.
+    const edited = produce(base, (draft) => {
+      draft.lines[1]!.tokens[0]!.text = 'too '
+    })
+    let count = 0
+    const result = produce(edited, (draft) => {
+      count = applyReadings(draft, annotated.lines)
+    })
+    expect(count).toBe(1)
+    expect(result.lines[0]!.tokens.map((item) => [item.ruby, item.ruby_source])).toEqual([
+      ['ㄧㄝˋ', 'auto'],
+      ['ㄎㄨㄥ', 'auto'],
+      ['ㄌㄧˇ', 'auto'],
+    ])
+    expect(result.lines[1]!.tokens[0]!.ruby).toBeNull()
+    // Timing is never touched.
+    expect(times(result.lines[0])).toEqual(times(base.lines[0]))
+    expect(readingKind(result)).toBe('zhuyin')
+
+    const pinyin = produce(base, (draft) => {
+      draft.lines[0]!.tokens[0]!.ruby = 'yè'
+      draft.lines[0]!.tokens[0]!.ruby_source = 'auto'
+    })
+    expect(readingKind(pinyin)).toBe('pinyin')
+    // Readings typed by hand say nothing about the kind of the automatic ones.
+    const manual = produce(base, (draft) => {
+      draft.lines[0]!.tokens[0]!.ruby = 'ㄧㄝˋ'
+      draft.lines[0]!.tokens[0]!.ruby_source = 'manual'
+    })
+    expect(readingKind(manual)).toBeNull()
   })
 
   it('locks, unlocks and clears timing', () => {

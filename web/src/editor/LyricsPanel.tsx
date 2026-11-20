@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { type MouseEvent, useEffect, useRef, useState } from 'react'
 
 import { api, toErrorBody } from '../api/client.ts'
@@ -22,6 +23,7 @@ import {
   type TokenRef,
   tokenAt,
 } from './doc.ts'
+import { applyOverrides } from './paths.ts'
 import type { SelectMode } from './store.ts'
 import { confidenceClass, editableText } from './tokens.ts'
 
@@ -30,7 +32,15 @@ function selectMode(event: MouseEvent): SelectMode {
   return event.ctrlKey || event.metaKey ? 'toggle' : 'replace'
 }
 
-function LineRow({ line, index }: { line: Line; index: number }) {
+/** Whether the project's theme (with its overrides) displays readings. */
+function useShowReadings(): boolean {
+  const style = useEditorState((state) => state.history.present.style)
+  const themes = useQuery({ queryKey: ['themes'], queryFn: api.themes })
+  const base = themes.data?.find((item) => item.name === style.theme)?.theme
+  return base ? applyOverrides(base, style.overrides).ruby.enabled : false
+}
+
+function LineRow({ line, index, showReadings }: { line: Line; index: number; showReadings: boolean }) {
   const t = useT()
   const { store, transport } = useEditor()
   const singers = useEditorState((state) => state.history.present.singers)
@@ -61,7 +71,7 @@ function LineRow({ line, index }: { line: Line; index: number }) {
       return
     }
     try {
-      const updated = await api.retokenize(line, text)
+      const updated = await api.retokenize(line, text, store.getState().history.present.meta.language)
       store.getState().edit((draft) => replaceLine(draft, index, updated), { label: 'edit text' })
       setEditing(false)
     } catch (cause) {
@@ -122,7 +132,14 @@ function LineRow({ line, index }: { line: Line; index: number }) {
                   if (token.start_ms !== null) transport.seek(token.start_ms)
                 }}
               >
-                {token.ruby ? <ruby>{token.text}<rt>{token.ruby}</rt></ruby> : token.text}
+                {token.ruby && (showReadings || token.ruby_source === 'manual') ? (
+                  <ruby>
+                    {token.text}
+                    <rt>{token.ruby}</rt>
+                  </ruby>
+                ) : (
+                  token.text
+                )}
               </button>
             )
           })}
@@ -269,12 +286,13 @@ export function LyricsPanel() {
   const { store } = useEditor()
   const lines = useEditorState((state) => state.history.present.lines)
   const readOnly = useEditorState((state) => state.readOnly)
+  const showReadings = useShowReadings()
   return (
     <section className="lyrics" aria-label="lyrics">
       <Inspector />
       <ol className="lines" data-testid="lyrics">
         {lines.map((line, index) => (
-          <LineRow key={line.id} line={line} index={index} />
+          <LineRow key={line.id} line={line} index={index} showReadings={showReadings} />
         ))}
       </ol>
       {lines.length === 0 ? (

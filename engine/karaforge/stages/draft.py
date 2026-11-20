@@ -16,6 +16,7 @@ from karaforge.align.draft import DraftSettings, draft_lyrics, to_project_lines
 from karaforge.pipeline.stage import JsonDict, Stage, StageContext, StageInputs, update_project
 from karaforge.project.schema import Line, Project
 from karaforge.stages.asr import TRANSCRIPT_FILE, load_transcript
+from karaforge.text.ruby import annotate_project
 
 DRAFT_FILE = "draft.json"
 
@@ -85,5 +86,6 @@ class DraftStage(Stage):
                 return
             project.lines = lines
             project.meta.lyrics_source = "asr"
+            annotate_project(project)
 
         update_project(ctx, apply)

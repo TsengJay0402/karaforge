@@ -11,6 +11,7 @@ from karaforge.io.importers import ParsedLyrics, load_lyrics
 from karaforge.pipeline.hashing import sha256_file
 from karaforge.project.schema import Project
 from karaforge.project.store import PROJECT_SUFFIX, ProjectStore, slugify
+from karaforge.text.ruby import annotate_project
 
 MEDIA_EXTENSIONS = (
     ".mp4",
@@ -98,6 +99,7 @@ def create_project(
         project.meta.artist = artist
     if not project.meta.title:
         project.meta.title = media.stem
+    annotate_project(project)
     project.media.source = f"media/source{extension}"
 
     store = ProjectStore(project_dir)
@@ -168,5 +170,6 @@ def create_or_update_project(
         project.meta.language = language
         changed = True
     if changed:
+        annotate_project(project)
         store.save(project)
     return store, False
