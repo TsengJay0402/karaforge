@@ -16,6 +16,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.108.0",
     "immer": "^11.2.10",
+    "jassub": "^2.5.38",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.6",

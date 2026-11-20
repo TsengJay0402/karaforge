@@ -2,10 +2,20 @@
 
 > 依規格 §12 持續維護。最新狀態在最上面；每個里程碑的驗收結果記錄在對應段落。
 
-## 目前狀態
+## 目前狀態（2026-11-21，工作因用量上限中斷時的實際狀態）
 
-- **進行中**：M2 對齊品質
-- **下一步**：M3 KTV 排版與輸出（排版引擎與外框填色 ASS 已在 M1 提前完成大部分）
+- **M2 對齊品質**：程式已完成並在 commit `ac5bfce` 凍結；dev 分組的比較與校正記錄在 `docs/adr/0006`。
+  **test 分組的完整評測還在背景執行中**（中斷時完成 17/120 個音檔，輸出在 `bench/_runs/reports/test-v1/`，
+  紀錄檔 `.tools/bench-test-v1.log`）。報告尚未產生，所以 **§10.4 的目標是否達成還沒有結論**；
+  `docs/benchmark-report.md` 與 ADR 0006 最後一節（`ctc-mms` 校正後的 dev 結果）尚未填入。
+- **M3 排版與輸出**：MKV、各種匯出／匯入格式、專案格式 v2 已完成並有測試（見 ADR 0008）；尚未寫 M3 的驗收紀錄。
+- **M4 Web App**：後端（FastAPI、工作佇列、SSE、`kf serve`）已完成並有測試（commit `17cacb4`）。
+  前端**做到一半，目前無法建置**：API client、i18n、編輯邏輯（doc／history／store／transport／timeline 幾何，
+  61 個 Vitest 測試通過）、專案列表、新增精靈、處理進度頁、編輯器外殼、工具列、對話框、預覽（JASSUB）、歌詞面板已寫好，
+  但 `Timeline.tsx`、`ThemePanel.tsx` 與 CSS 還沒寫（`Editor.tsx` 已經 import 它們），也還沒有做過任何瀏覽器實測、
+  Playwright E2E 與「預覽對匯出」的影格比對。JASSUB 預覽元件**完全沒有實際執行過**。
+- **M5、M6**：尚未開始（無歌詞 ASR 流程、注音／拼音與破音字測試集、`kf batch`、`kf doctor`、`kf align`、
+  Docker 映像實際建置、完整文件、LICENSES.md、CHANGELOG、示範影片、REPORT.md）。
 
 ## 里程碑
 
