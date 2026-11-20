@@ -1,6 +1,6 @@
 from os import PathLike
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, BinaryIO, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -53,7 +53,7 @@ def read(
     always_2d: bool = False,
 ) -> tuple[npt.NDArray[Any], int]: ...
 def write(
-    file: _Path,
+    file: _Path | BinaryIO,
     data: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integer[Any]],
     samplerate: int,
     subtype: str | None = None,

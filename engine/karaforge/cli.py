@@ -408,6 +408,76 @@ def auto_command(
     console.print(pick(f"完成:[bold]{exported}[/bold]", f"Done: [bold]{exported}[/bold]"))
 
 
+ENV_WORKSPACE = "KARAFORGE_WORKSPACE"
+
+
+@app.command("serve")
+def serve_command(
+    workspace: Annotated[
+        Path | None,
+        typer.Option(
+            "--workspace",
+            "-w",
+            help="放專案的資料夾(預設:目前的資料夾)/ folder that holds the projects.",
+        ),
+    ] = None,
+    host: Annotated[
+        str, typer.Option("--host", help="監聽位址 / address to listen on.")
+    ] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="連接埠 / port.")] = 8765,
+    profile: ProfileOption = DEFAULT_PROFILE,
+    open_browser: Annotated[
+        bool, typer.Option("--open", help="啟動後開啟瀏覽器 / open the browser.")
+    ] = False,
+    verbose: VerboseOption = False,
+) -> None:
+    """啟動 Web 介面 / start the web app."""
+    import os
+
+    import uvicorn
+
+    from karaforge import paths
+    from karaforge.server import ServerSettings, create_app
+
+    get_profile(profile)
+    root = workspace or Path(os.environ.get(ENV_WORKSPACE) or ".")
+    static = paths.bundled_dir("web")
+    application = create_app(
+        ServerSettings(workspace=root, static_dir=static, default_profile=profile)
+    )
+    shown_host = "localhost" if host in ("127.0.0.1", "0.0.0.0", "::") else host
+    address = f"http://{shown_host}:{port}"
+    console.print(
+        pick(
+            f"KaraForge 已啟動:[bold]{address}[/bold](專案資料夾:{root.resolve()})",
+            f"KaraForge is running at [bold]{address}[/bold] (projects in {root.resolve()})",
+        )
+    )
+    if not (static / "index.html").is_file():
+        console.print(
+            pick(
+                "[yellow]找不到已建置的前端,只提供 API。"
+                "請在 web/ 執行 npm ci && npm run build。[/yellow]",
+                "[yellow]The web app has not been built; only the API is served. "
+                "Run npm ci && npm run build in web/.[/yellow]",
+            )
+        )
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        console.print(
+            pick(
+                "[yellow]注意:伺服器沒有登入機制,只應該在信任的網路上對外開放。[/yellow]",
+                "[yellow]Note: the server has no authentication; expose it only on a network "
+                "you trust.[/yellow]",
+            )
+        )
+    if open_browser:
+        import threading
+        import webbrowser
+
+        threading.Timer(1.0, webbrowser.open, args=(address,)).start()
+    uvicorn.run(application, host=host, port=port, log_level="info" if verbose else "warning")
+
+
 @app.command("bench")
 def bench_command(
     suite: Annotated[str, typer.Option("--suite", help="synthetic 或 real。")] = "synthetic",
