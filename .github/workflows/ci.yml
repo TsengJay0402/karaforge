@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.KARAFORGE_HOME }}/models
-          key: models-cpu-lite-${{ hashFiles('engine/karaforge/models/registry.py') }}
+          key: models-cpu-lite-${{ hashFiles('engine/karaforge/models/registry.json') }}
       - name: Download cpu-lite models
         run: uv run --no-sync kf models download --profile cpu-lite
       - name: Integration tests
@@ -96,6 +96,40 @@ jobs:
         with:
           name: web-dist
           path: web/dist
+
+  e2e:
+    name: Browser tests (Playwright, no models)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg (with libass)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv sync --extra cpu --frozen
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - name: End-to-end tests against the real server
+        run: npm run e2e
+        working-directory: web
+        env:
+          KARAFORGE_E2E_PYTHON: ${{ github.workspace }}/.venv/bin/python
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: web/test-results
 
   docker:
     name: Dockerfile lint + CPU image build
