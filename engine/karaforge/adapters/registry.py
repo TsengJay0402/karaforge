@@ -102,3 +102,21 @@ def describe_profile(profile: Profile) -> list[AdapterInfo]:
         create_transcriber(profile.asr, device).info,
         create_aligner(profile.align, profile.asr, device).info,
     ]
+
+
+def profile_model_ids(profile: Profile) -> list[str]:
+    """Registry ids of every model a profile needs, including required companions."""
+    from karaforge.models.registry import get_model
+
+    ordered: list[str] = []
+
+    def add(model_id: str) -> None:
+        for dependency in get_model(model_id).requires:
+            add(dependency)
+        if model_id not in ordered:
+            ordered.append(model_id)
+
+    for info in describe_profile(profile):
+        for model_id in info.models:
+            add(model_id)
+    return ordered

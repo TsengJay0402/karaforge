@@ -408,6 +408,233 @@ def auto_command(
     console.print(pick(f"完成:[bold]{exported}[/bold]", f"Done: [bold]{exported}[/bold]"))
 
 
+@app.command("align")
+def align_command(
+    project: Annotated[Path, typer.Argument(help="專案資料夾 / project folder.")],
+    respect_locked: Annotated[
+        bool,
+        typer.Option(
+            "--respect-locked/--ignore-locked",
+            help="保留已鎖定的字作為錨點(預設)/ keep locked tokens as anchors (default).",
+        ),
+    ] = True,
+    line: Annotated[
+        list[int] | None,
+        typer.Option("--line", help="只重新對齊這幾行(從 1 起算,可重複)/ only these lines."),
+    ] = None,
+    profile: ProfileOption = DEFAULT_PROFILE,
+    settings: SetOption = None,
+    verbose: VerboseOption = False,
+) -> None:
+    """重新對齊歌詞 / align the lyrics again.
+
+    已鎖定的字(在編輯器裡修過、或用打點模式標過的字)不會被移動,而且會當成錨點,
+    讓它們之間的字對得更準。加上 --ignore-locked 則先解除所有鎖定、整首重來。
+    """
+    store = open_project(project)
+    document = store.load()
+    numbers = sorted(set(line or []))
+    invalid = [number for number in numbers if not 1 <= number <= len(document.lines)]
+    if invalid:
+        raise ProjectError(
+            f"沒有第 {'、'.join(str(number) for number in invalid)} 行"
+            f"(這個專案有 {len(document.lines)} 行)。",
+            f"No such line: {', '.join(str(number) for number in invalid)} "
+            f"(the project has {len(document.lines)} lines).",
+        )
+    locked = sum(token.locked for item in document.lines for token in item.tokens)
+    if not respect_locked and locked:
+        for item in document.lines:
+            for token in item.tokens:
+                if token.locked:
+                    token.locked = False
+                    token.source = "auto"
+        store.save(document)
+        console.print(
+            pick(
+                f"已解除 {locked} 個鎖定(上一版存在 project.json.bak)。",
+                f"Released {locked} locked tokens (the previous version is in project.json.bak).",
+            )
+        )
+    elif locked:
+        console.print(
+            pick(
+                f"保留 {locked} 個已鎖定的字作為錨點。",
+                f"Keeping {locked} locked tokens as anchors.",
+            )
+        )
+    options: dict[str, Any] = {}
+    if numbers:
+        options["align_only_lines"] = [document.lines[number - 1].id for number in numbers]
+    report = _run(
+        store,
+        resolve_profile(profile, settings),
+        targets=("align",),
+        force_from="align",
+        options=options,
+    )
+    _print_summary(store, report)
+
+
+@app.command("batch")
+def batch_command(
+    folder: Annotated[Path, typer.Argument(help="放歌曲與歌詞的資料夾 / folder with songs.")],
+    out: Annotated[Path, typer.Option("--out", "-o", help="輸出資料夾 / output folder.")],
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="輸出格式 / format: mp4, mkv, ass, lrc, …")
+    ] = "mp4",
+    profile: ProfileOption = DEFAULT_PROFILE,
+    audio: Annotated[
+        str, typer.Option("--audio", help="instrumental、guide:-12db、original.")
+    ] = "instrumental",
+    res: Annotated[str | None, typer.Option("--res", help="解析度 / resolution.")] = None,
+    language: Annotated[str | None, typer.Option("--language", help="歌曲語言 / language.")] = None,
+    transcribe: Annotated[
+        bool,
+        typer.Option(
+            "--transcribe/--skip-without-lyrics",
+            help="沒有歌詞檔的歌用語音辨識產生草稿 / draft missing lyrics by speech recognition.",
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="只列出會做什麼 / only list what would be done.")
+    ] = False,
+    settings: SetOption = None,
+    verbose: VerboseOption = False,
+) -> None:
+    """批次處理資料夾:同名的媒體檔與歌詞檔配成一首 / process every song of a folder.
+
+    每首歌的專案放在輸出資料夾裡(歌名.kfproj),所以中斷後再執行一次會從停下來的地方繼續;
+    一首失敗不會影響其他首,最後列出結果,有失敗時結束代碼為 1。
+    """
+    import json
+    import time
+
+    from rich.table import Table
+
+    from karaforge.batch import plan_batch, project_dir_for
+    from karaforge.exporting import get_format
+    from karaforge.project.create import create_or_update_project
+    from karaforge.stages.standard import PROCESS_TARGETS
+
+    plan = plan_batch(folder)
+    extension = get_format(fmt).suffix
+    chosen = resolve_profile(profile, settings)
+    for path in plan.duplicates:
+        console.print(
+            pick(
+                f"[yellow]略過 {path.name}:同名的媒體檔已經有一個。[/yellow]",
+                f"[yellow]Skipping {path.name}: another media file has the same name.[/yellow]",
+            )
+        )
+    for path in plan.unmatched_lyrics:
+        console.print(
+            pick(
+                f"[yellow]{path.name} 沒有同名的媒體檔。[/yellow]",
+                f"[yellow]{path.name} has no media file of the same name.[/yellow]",
+            )
+        )
+    if not plan.items:
+        raise ProjectError(
+            f"{folder} 裡沒有可以處理的媒體檔。",
+            f"No media files to process in {folder}.",
+            hint_zh="把歌曲(mp3、wav、mp4…)和同名的歌詞檔(.txt、.lrc…)放進資料夾。",
+            hint_en="Put songs (mp3, wav, mp4, …) and same-named lyrics (.txt, .lrc, …) in it.",
+        )
+
+    results: list[dict[str, Any]] = []
+    failed = False
+    for number, item in enumerate(plan.items, start=1):
+        target = out / f"{item.name}{extension}"
+        entry: dict[str, Any] = {
+            "name": item.name,
+            "media": str(item.media),
+            "lyrics": str(item.lyrics) if item.lyrics else None,
+            "output": str(target),
+        }
+        results.append(entry)
+        console.rule(f"[bold]{number}/{len(plan.items)}  {item.name}")
+        if item.lyrics is None and not transcribe:
+            entry["status"] = "skipped"
+            entry["reason"] = pick("沒有歌詞檔", "no lyrics file")
+            console.print(
+                pick(
+                    "  [yellow]沒有同名的歌詞檔,略過"
+                    "(加上 --transcribe 可用語音辨識產生草稿)。[/yellow]",
+                    "  [yellow]No lyrics file of the same name; skipped "
+                    "(--transcribe drafts them by speech recognition).[/yellow]",
+                )
+            )
+            continue
+        if dry_run:
+            entry["status"] = "planned"
+            source = item.lyrics.name if item.lyrics else pick("語音辨識", "speech recognition")
+            console.print(f"  {item.media.name} + {source} → {target}")
+            continue
+        started = time.monotonic()
+        try:
+            store, _created = create_or_update_project(
+                item.media, project_dir_for(item, out), lyrics=item.lyrics, language=language
+            )
+            _run(store, chosen, targets=PROCESS_TARGETS)
+            export_project(store, fmt=fmt, audio=audio, res=res, output=target, profile=profile)
+            document = store.load()
+            tokens = [token for row in document.lines for token in row.tokens]
+            entry["status"] = "done"
+            entry["tokens"] = len(tokens)
+            entry["low_confidence"] = sum(
+                (token.confidence or 0.0) < 0.5 and not token.locked
+                for token in tokens
+                if token.is_timed
+            )
+        except KaraForgeError as error:
+            failed = True
+            entry["status"] = "failed"
+            entry["reason"] = pick(error.message_zh, error.message_en)
+            report_error(error, verbose=verbose)
+        entry["seconds"] = round(time.monotonic() - started, 1)
+
+    table = Table(show_edge=False)
+    for column in (
+        pick("歌曲", "Song"),
+        pick("結果", "Result"),
+        pick("字數", "Tokens"),
+        pick("建議檢查", "To check"),
+        pick("時間", "Time"),
+        pick("說明", "Note"),
+    ):
+        table.add_column(column)
+    labels = {
+        "done": pick("[green]完成[/green]", "[green]done[/green]"),
+        "failed": pick("[red]失敗[/red]", "[red]failed[/red]"),
+        "skipped": pick("[yellow]略過[/yellow]", "[yellow]skipped[/yellow]"),
+        "planned": pick("預定", "planned"),
+    }
+    for entry in results:
+        table.add_row(
+            entry["name"],
+            labels[entry["status"]],
+            str(entry.get("tokens", "")),
+            str(entry.get("low_confidence", "")),
+            f"{entry['seconds']:.0f}s" if "seconds" in entry else "",
+            entry.get("reason", ""),
+        )
+    console.print()
+    console.print(table)
+    if not dry_run:
+        out.mkdir(parents=True, exist_ok=True)
+        report_path = out / "batch-report.json"
+        report_path.write_text(
+            json.dumps(
+                {"profile": profile, "format": fmt, "songs": results}, ensure_ascii=False, indent=1
+            ),
+            encoding="utf-8",
+        )
+        console.print(pick(f"[dim]紀錄:{report_path}[/dim]", f"[dim]Report: {report_path}[/dim]"))
+    if failed:
+        raise typer.Exit(1)
+
+
 ENV_WORKSPACE = "KARAFORGE_WORKSPACE"
 
 
@@ -545,6 +772,50 @@ def bench_command(
     )
 
 
+@app.command("doctor")
+def doctor_command(
+    models: Annotated[
+        bool, typer.Option("--models/--no-models", help="檢查模型是否已下載 / check the models.")
+    ] = True,
+    as_json: Annotated[bool, typer.Option("--json", help="輸出 JSON / print JSON.")] = False,
+) -> None:
+    """檢查環境與依賴 / check the environment and the dependencies."""
+    import json
+
+    from karaforge.doctor import run_checks, worst
+
+    checks = run_checks(models=models)
+    overall = worst(checks)
+    if as_json:
+        payload = {"status": overall, "checks": [check.to_dict() for check in checks]}
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=1))
+    else:
+        marks = {"ok": "[green]✓[/green]", "warn": "[yellow]![/yellow]", "fail": "[red]✗[/red]"}
+        for check in checks:
+            console.print(
+                f"  {marks[check.status]} {pick(check.message_zh, check.message_en)}",
+                highlight=False,
+            )
+            hint = pick(check.hint_zh or "", check.hint_en or "")
+            if hint:
+                console.print(f"      [dim]{hint}[/dim]", highlight=False)
+        console.print(
+            {
+                "ok": pick("[green]一切就緒。[/green]", "[green]Everything is ready.[/green]"),
+                "warn": pick(
+                    "[yellow]可以使用,但有需要留意的地方。[/yellow]",
+                    "[yellow]Usable, with the points marked ! above.[/yellow]",
+                ),
+                "fail": pick(
+                    "[red]有問題需要先解決(標示 ✗ 的項目)。[/red]",
+                    "[red]The items marked ✗ need fixing first.[/red]",
+                ),
+            }[overall]
+        )
+    if overall == "fail":
+        raise typer.Exit(1)
+
+
 models_app = typer.Typer(
     help="管理模型權重 / manage model weights.", no_args_is_help=True, add_completion=False
 )
@@ -553,21 +824,9 @@ app.add_typer(models_app, name="models")
 
 def profile_model_ids(profile: Profile) -> list[str]:
     """Registry ids of every model a profile needs, including required companions."""
-    from karaforge.adapters.registry import describe_profile
-    from karaforge.models.registry import get_model
+    from karaforge.adapters.registry import profile_model_ids as model_ids
 
-    ordered: list[str] = []
-
-    def add(model_id: str) -> None:
-        for dependency in get_model(model_id).requires:
-            add(dependency)
-        if model_id not in ordered:
-            ordered.append(model_id)
-
-    for info in describe_profile(profile):
-        for model_id in info.models:
-            add(model_id)
-    return ordered
+    return model_ids(profile)
 
 
 def _size(size: int) -> str:

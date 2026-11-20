@@ -261,3 +261,195 @@ def test_profile_model_ids_include_required_companions() -> None:
     assert "whisper-base" in ids
     assert len(ids) == len(set(ids))
     assert json.dumps(ids)  # plain strings
+
+
+def test_doctor_prints_checks_and_fails_only_on_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    from karaforge import doctor
+
+    checks = [
+        doctor.Check("python", "ok", "直譯器沒問題", "interpreter is fine"),
+        doctor.Check("device", "warn", "只有 CPU", "CPU only", "裝顯示卡", "get a GPU"),
+    ]
+    seen: list[bool] = []
+
+    def fake_checks(*, models: bool = True) -> list[doctor.Check]:
+        seen.append(models)
+        return list(checks)
+
+    monkeypatch.setattr(doctor, "run_checks", fake_checks)
+    monkeypatch.setenv("KARAFORGE_LANG", "en")
+    result = runner.invoke(cli.app, ["doctor"])
+    assert result.exit_code == 0, result.output
+    assert "interpreter is fine" in result.output
+    assert "CPU only" in result.output and "get a GPU" in result.output
+    assert seen == [True]
+
+    result = runner.invoke(cli.app, ["doctor", "--no-models", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "warn"
+    assert [check["name"] for check in payload["checks"]] == ["python", "device"]
+    assert payload["checks"][1]["hint_zh"] == "裝顯示卡"
+    assert seen == [True, False]
+
+    checks.append(doctor.Check("ffmpeg", "fail", "找不到 ffmpeg", "ffmpeg not found"))
+    result = runner.invoke(cli.app, ["doctor"])
+    assert result.exit_code == 1
+    assert "ffmpeg not found" in result.output
+
+
+class RunRecorder:
+    """Stands in for the pipeline: remembers how it was called and times every token."""
+
+    def __init__(self, fail_for: str | None = None) -> None:
+        self.calls: list[dict[str, object]] = []
+        self.fail_for = fail_for
+
+    def __call__(
+        self,
+        store: ProjectStore,
+        profile: object,
+        *,
+        targets: tuple[str, ...] | None,
+        force_from: str | None = None,
+        options: dict[str, object] | None = None,
+        include_dependencies: bool = True,
+    ) -> object:
+        from karaforge.pipeline.runner import RunReport
+
+        self.calls.append(
+            {"root": store.root, "targets": targets, "force_from": force_from, "options": options}
+        )
+        if self.fail_for is not None and self.fail_for in store.root.name:
+            raise PipelineError("這首歌處理失敗", "this song failed")
+        project = store.load()
+        clock = 1000
+        for line in project.lines:
+            for index, token in enumerate(line.tokens):
+                if not token.locked:
+                    timed = {"start_ms": clock, "end_ms": clock + 200, "confidence": 0.9}
+                    line.tokens[index] = token.model_copy(update=timed)
+                clock += 200
+        store.save(project)
+        return RunReport()
+
+
+def test_align_keeps_locked_tokens_and_selects_lines(
+    media: Path, lyrics: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "song.kfproj"
+    store = create_project(media, root, lyrics=lyrics)
+    project = store.load()
+    project.lines[0].tokens[1] = (
+        project.lines[0]
+        .tokens[1]
+        .model_copy(update={"start_ms": 5000, "end_ms": 5300, "locked": True, "source": "manual"})
+    )
+    store.save(project)
+    recorder = RunRecorder()
+    monkeypatch.setattr(cli, "_run", recorder)
+    monkeypatch.setenv("KARAFORGE_LANG", "en")
+
+    result = runner.invoke(cli.app, ["align", str(root), "--respect-locked", "--line", "2"])
+    assert result.exit_code == 0, result.output
+    assert "Keeping 1 locked tokens as anchors" in result.output
+    assert recorder.calls[-1]["targets"] == ("align",)
+    assert recorder.calls[-1]["force_from"] == "align"
+    assert recorder.calls[-1]["options"] == {"align_only_lines": [project.lines[1].id]}
+    kept = store.load().lines[0].tokens[1]
+    assert (kept.start_ms, kept.end_ms, kept.locked) == (5000, 5300, True)
+
+    # Without --line the whole song is aligned again; the default is to respect the locks.
+    result = runner.invoke(cli.app, ["align", str(root)])
+    assert result.exit_code == 0, result.output
+    assert recorder.calls[-1]["options"] == {}
+    assert store.load().lines[0].tokens[1].locked is True
+
+    result = runner.invoke(cli.app, ["align", str(root), "--ignore-locked"])
+    assert result.exit_code == 0, result.output
+    assert "Released 1 locked tokens" in result.output
+    released = store.load().lines[0].tokens[1]
+    assert released.locked is False and released.source == "auto"
+    assert released.start_ms != 5000  # it was aligned again like every other token
+    assert (root / "project.json.bak").is_file()
+
+    calls = len(recorder.calls)
+    result = runner.invoke(cli.app, ["align", str(root), "--line", "9"])
+    assert isinstance(result.exception, ProjectError)
+    assert "the project has 2 lines" in result.exception.message_en
+    assert len(recorder.calls) == calls  # nothing was run
+
+
+def make_song(folder: Path, name: str, source: Path, lyrics_text: str | None) -> None:
+    (folder / f"{name}.wav").write_bytes(source.read_bytes())
+    if lyrics_text is not None:
+        (folder / f"{name}.txt").write_text(lyrics_text, encoding="utf-8")
+
+
+def test_batch_processes_every_pair_and_reports(
+    media: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    songs = tmp_path / "songs"
+    songs.mkdir()
+    make_song(songs, "alpha", media, "第一首歌\n")
+    make_song(songs, "beta", media, None)
+    make_song(songs, "gamma", media, "third song\n")
+    (songs / "orphan.txt").write_text("沒有音檔\n", encoding="utf-8")
+    out = tmp_path / "exports"
+    recorder = RunRecorder(fail_for="gamma")
+    exported: list[Path] = []
+
+    def fake_export(store: ProjectStore, **options: object) -> Path:
+        target = options["output"]
+        assert isinstance(target, Path)
+        assert options["fmt"] == "lrc" and options["audio"] == "original"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("[00:01.00]x\n", encoding="utf-8")
+        exported.append(target)
+        return target
+
+    monkeypatch.setattr(cli, "_run", recorder)
+    monkeypatch.setattr(cli, "export_project", fake_export)
+    monkeypatch.setenv("KARAFORGE_LANG", "en")
+    monkeypatch.setenv("COLUMNS", "200")
+
+    arguments = ["batch", str(songs), "--out", str(out), "--format", "lrc", "--audio", "original"]
+    planned = runner.invoke(cli.app, [*arguments, "--dry-run"])
+    assert planned.exit_code == 0, planned.output
+    assert "alpha.wav + alpha.txt" in planned.output
+    assert "orphan.txt has no media file" in planned.output
+    assert not out.exists() and recorder.calls == []
+
+    result = runner.invoke(cli.app, arguments)
+    assert result.exit_code == 1, result.output  # one song failed
+    assert exported == [out / "alpha.lrc"]
+    assert (out / "alpha.kfproj" / "project.json").is_file()
+    report = json.loads((out / "batch-report.json").read_text(encoding="utf-8"))
+    by_name = {song["name"]: song for song in report["songs"]}
+    assert report["format"] == "lrc"
+    assert by_name["alpha"]["status"] == "done"
+    assert by_name["alpha"]["tokens"] == 4 and by_name["alpha"]["low_confidence"] == 0
+    assert by_name["beta"]["status"] == "skipped"
+    assert by_name["gamma"]["status"] == "failed"
+    assert by_name["gamma"]["reason"] == "this song failed"
+    # The failure of one song did not stop the others, and it is shown in the summary.
+    assert "this song failed" in result.output
+    assert [call["root"] for call in recorder.calls] == [
+        out / "alpha.kfproj",
+        out / "gamma.kfproj",
+    ]
+
+    # A second run reuses the projects (the caches make it cheap) instead of failing.
+    recorder.fail_for = None
+    again = runner.invoke(cli.app, arguments)
+    assert again.exit_code == 0, again.output
+    assert exported[-2:] == [out / "alpha.lrc", out / "gamma.lrc"]
+
+
+def test_batch_needs_a_folder_with_media(tmp_path: Path) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    result = runner.invoke(cli.app, ["batch", str(empty), "--out", str(tmp_path / "out")])
+    assert isinstance(result.exception, ProjectError)
+    result = runner.invoke(cli.app, ["batch", str(tmp_path / "nowhere"), "--out", str(tmp_path)])
+    assert isinstance(result.exception, MediaError)
