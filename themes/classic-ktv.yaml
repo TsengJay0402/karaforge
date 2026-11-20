@@ -1,0 +1,64 @@
+# 經典 KTV:白字黑框,唱到的字變成演唱者的顏色並換成白框。
+format: 1
+name: classic-ktv
+title: 經典 KTV
+description: 白字黑框、唱過變色並換白框的傳統 KTV 伴唱帶樣式;男藍、女粉、合唱綠。
+reference_height: 1080
+font:
+  family: GenSenRounded2 TW B
+  fallback: Noto Sans TC
+  size: 84
+  letter_spacing: 2
+text:
+  outline: 6
+  shadow: 3
+  blur: 0
+colors:
+  unsung: { fill: "#FFFFFF", outline: "#101010" }
+  shadow: "#000000A0"
+  slots:
+    male: { fill: "#2F7BFF", outline: "#FFFFFF" }
+    female: { fill: "#FF4F9A", outline: "#FFFFFF" }
+    duet: { fill: "#35D05B", outline: "#FFFFFF" }
+  duet_mode: third
+layout:
+  rows:
+    - { y: 0.74, align: left, margin: 0.06 }
+    - { y: 0.88, align: right, margin: 0.06 }
+  max_width: 0.86
+  lead_in_ms: 1500
+  first_lead_in_ms: 3500
+  swap_delay_ms: 350
+  linger_ms: 700
+  fade_ms: 150
+  section_gap_ms: 4000
+ruby:
+  enabled: false
+  scale: 0.4
+  gap: 2
+  min_spacing: 6
+countdown:
+  enabled: true
+  min_gap_ms: 4000
+  dots: 3
+  interval_ms: 1000
+  use_beats: true
+  radius: 13
+  spacing: 16
+  offset: 18
+  fill: "#FFE14D"
+  outline: "#202020"
+title_card:
+  enabled: true
+  y: 0.4
+  title_size: 110
+  info_size: 52
+  line_gap: 26
+  max_duration_ms: 6000
+  min_duration_ms: 1500
+  fill: "#FFFFFF"
+  outline: "#101010"
+  accent: "#FFE14D"
+background:
+  color: "#12141C"
+  dim_bottom: 0.45

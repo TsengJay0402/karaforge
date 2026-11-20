@@ -1,0 +1,452 @@
+{
+  "$defs": {
+    "Analysis": {
+      "additionalProperties": false,
+      "description": "Results of audio analysis that the layout engine and the editor reuse.",
+      "properties": {
+        "tempo_bpm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tempo Bpm"
+        },
+        "beats_ms": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Beats Ms",
+          "type": "array"
+        },
+        "vocal_regions": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Vocal Regions",
+          "type": "array"
+        }
+      },
+      "title": "Analysis",
+      "type": "object"
+    },
+    "Background": {
+      "additionalProperties": false,
+      "description": "What is shown behind the lyrics.",
+      "properties": {
+        "type": {
+          "default": "video",
+          "enum": [
+            "video",
+            "image",
+            "color",
+            "blur"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image"
+        }
+      },
+      "title": "Background",
+      "type": "object"
+    },
+    "Line": {
+      "additionalProperties": false,
+      "description": "One lyric line as written by the user (it may be wrapped for display later).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "singer": {
+          "default": "m",
+          "title": "Singer",
+          "type": "string"
+        },
+        "paragraph": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Paragraph",
+          "type": "integer"
+        },
+        "tokens": {
+          "items": {
+            "$ref": "#/$defs/Token"
+          },
+          "title": "Tokens",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Line",
+      "type": "object"
+    },
+    "Media": {
+      "additionalProperties": false,
+      "description": "Paths of media files, relative to the project folder (POSIX separators).",
+      "properties": {
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "audio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio"
+        },
+        "vocals": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vocals"
+        },
+        "instrumental": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instrumental"
+        },
+        "has_video": {
+          "default": false,
+          "title": "Has Video",
+          "type": "boolean"
+        }
+      },
+      "title": "Media",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "Song metadata shown on the title card and written to exported files.",
+      "properties": {
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "artist": {
+          "default": "",
+          "title": "Artist",
+          "type": "string"
+        },
+        "lyricist": {
+          "default": "",
+          "title": "Lyricist",
+          "type": "string"
+        },
+        "composer": {
+          "default": "",
+          "title": "Composer",
+          "type": "string"
+        },
+        "language": {
+          "default": "zh-TW",
+          "title": "Language",
+          "type": "string"
+        },
+        "duration_ms": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        }
+      },
+      "title": "Meta",
+      "type": "object"
+    },
+    "Render": {
+      "additionalProperties": false,
+      "description": "Output video settings.",
+      "properties": {
+        "resolution": {
+          "default": [
+            1920,
+            1080
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Resolution",
+          "type": "array"
+        },
+        "fps": {
+          "default": 30.0,
+          "exclusiveMinimum": 0,
+          "maximum": 240,
+          "title": "Fps",
+          "type": "number"
+        },
+        "background": {
+          "$ref": "#/$defs/Background"
+        }
+      },
+      "title": "Render",
+      "type": "object"
+    },
+    "Singer": {
+      "additionalProperties": false,
+      "description": "A singer and the theme colour slot used for their lines.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "theme_slot": {
+          "default": "male",
+          "title": "Theme Slot",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Singer",
+      "type": "object"
+    },
+    "Style": {
+      "additionalProperties": false,
+      "description": "Which theme to use and per-project overrides of theme values.",
+      "properties": {
+        "theme": {
+          "default": "classic-ktv",
+          "title": "Theme",
+          "type": "string"
+        },
+        "overrides": {
+          "additionalProperties": true,
+          "title": "Overrides",
+          "type": "object"
+        }
+      },
+      "title": "Style",
+      "type": "object"
+    },
+    "Token": {
+      "additionalProperties": false,
+      "description": "The smallest unit that is timed and filled: one CJK character or one Latin word.\n\n``text`` keeps any punctuation and whitespace attached to the unit, so joining the\n``text`` of all tokens of a line reproduces the line exactly.",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Ms"
+        },
+        "end_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Ms"
+        },
+        "ruby": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ruby"
+        },
+        "ruby_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "auto",
+                "manual"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ruby Source"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "locked": {
+          "default": false,
+          "title": "Locked",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "manual"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "Token",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The document stored in ``project.json``.",
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "revision": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "media": {
+      "$ref": "#/$defs/Media"
+    },
+    "analysis": {
+      "$ref": "#/$defs/Analysis"
+    },
+    "singers": {
+      "items": {
+        "$ref": "#/$defs/Singer"
+      },
+      "title": "Singers",
+      "type": "array"
+    },
+    "lines": {
+      "items": {
+        "$ref": "#/$defs/Line"
+      },
+      "title": "Lines",
+      "type": "array"
+    },
+    "style": {
+      "$ref": "#/$defs/Style"
+    },
+    "render": {
+      "$ref": "#/$defs/Render"
+    }
+  },
+  "title": "KaraForge project.json (schema version 1)",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://karaforge.dev/schema/project-v1.json"
+}

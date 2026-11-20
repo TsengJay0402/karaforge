@@ -1,0 +1,562 @@
+{
+ "version": 1,
+ "width": 1280,
+ "height": 720,
+ "duration_ms": 120000,
+ "style": {
+  "theme": "zhuyin-learner",
+  "font_family": "GenSenRounded2 TW B",
+  "font_ass_size": 56.75,
+  "ruby_ass_size": 20.43,
+  "letter_spacing": 2.67,
+  "outline": 3.33,
+  "shadow": 2.0,
+  "blur": 0.0,
+  "fade_ms": 150,
+  "unsung_fill": "#FFFFFF",
+  "unsung_outline": "#101010",
+  "shadow_color": "#000000A0",
+  "slots": {
+   "male": [
+    "#2F7BFF",
+    "#FFFFFF"
+   ],
+   "female": [
+    "#FF4F9A",
+    "#FFFFFF"
+   ],
+   "duet": [
+    "#35D05B",
+    "#FFFFFF"
+   ]
+  },
+  "duet_mode": "third",
+  "countdown_fill": "#FFE14D",
+  "countdown_outline": "#202020",
+  "card_fill": "#FFFFFF",
+  "card_outline": "#101010",
+  "card_accent": "#FFE14D"
+ },
+ "fonts": [
+  {
+   "family": "GenSenRounded2 TW B",
+   "file": "GenSenRounded2TW-B.otf"
+  }
+ ],
+ "lines": [
+  {
+   "id": "L001",
+   "source_line": "L001",
+   "part": 0,
+   "singer": "m",
+   "slot": "male",
+   "row": 0,
+   "x": 76.8,
+   "y": 475.63,
+   "width": 317.33,
+   "height": 56.75,
+   "baseline": 523.25,
+   "text": "夜空裡的星星",
+   "runs": [
+    {
+     "text": "夜",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "空",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "裡",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "的",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "星",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "星",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "夜",
+     "x0": 76.8,
+     "x1": 130.13,
+     "start_ms": 10000,
+     "end_ms": 10400
+    },
+    {
+     "index": 1,
+     "text": "空",
+     "x0": 130.13,
+     "x1": 183.47,
+     "start_ms": 10400,
+     "end_ms": 10800
+    },
+    {
+     "index": 2,
+     "text": "裡",
+     "x0": 183.47,
+     "x1": 236.8,
+     "start_ms": 10800,
+     "end_ms": 11200
+    },
+    {
+     "index": 3,
+     "text": "的",
+     "x0": 236.8,
+     "x1": 290.13,
+     "start_ms": 11200,
+     "end_ms": 11600
+    },
+    {
+     "index": 4,
+     "text": "星",
+     "x0": 290.13,
+     "x1": 343.47,
+     "start_ms": 11600,
+     "end_ms": 12000
+    },
+    {
+     "index": 5,
+     "text": "星",
+     "x0": 343.47,
+     "x1": 394.13,
+     "start_ms": 12000,
+     "end_ms": 12400
+    }
+   ],
+   "rubies": [
+    {
+     "token_index": 1,
+     "text": "ㄎㄨㄥ",
+     "x": 128.11,
+     "y": 457.33,
+     "width": 54.72,
+     "height": 20.43,
+     "ass_size": 20.43,
+     "family": "GenSenRounded2 TW B",
+     "start_ms": 10400,
+     "end_ms": 10800
+    }
+   ],
+   "appear_ms": 6500,
+   "disappear_ms": 15400,
+   "sing_start_ms": 10000,
+   "sing_end_ms": 12400,
+   "fill": [
+    {
+     "time_ms": 10000,
+     "x": 73.47
+    },
+    {
+     "time_ms": 10400,
+     "x": 130.13
+    },
+    {
+     "time_ms": 10800,
+     "x": 183.47
+    },
+    {
+     "time_ms": 11200,
+     "x": 236.8
+    },
+    {
+     "time_ms": 11600,
+     "x": 290.13
+    },
+    {
+     "time_ms": 12000,
+     "x": 343.47
+    },
+    {
+     "time_ms": 12400,
+     "x": 399.46
+    }
+   ],
+   "clip_top": 467.63,
+   "clip_bottom": 540.37,
+   "clip_left": 68.8,
+   "clip_right": 402.13
+  },
+  {
+   "id": "L002",
+   "source_line": "L002",
+   "part": 0,
+   "singer": "f",
+   "slot": "female",
+   "row": 1,
+   "x": 838.61,
+   "y": 605.23,
+   "width": 364.59,
+   "height": 56.75,
+   "baseline": 652.85,
+   "text": "慢慢 so bright",
+   "runs": [
+    {
+     "text": "慢",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "慢",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": " ",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "s",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "o",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": " ",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "b",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "r",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "i",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "g",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "h",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "t",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "慢",
+     "x0": 838.61,
+     "x1": 891.94,
+     "start_ms": 13000,
+     "end_ms": 13400
+    },
+    {
+     "index": 1,
+     "text": "慢 ",
+     "x0": 891.94,
+     "x1": 959.44,
+     "start_ms": 13400,
+     "end_ms": 13800
+    },
+    {
+     "index": 2,
+     "text": "so ",
+     "x0": 959.44,
+     "x1": 1035.74,
+     "start_ms": 13800,
+     "end_ms": 14200
+    },
+    {
+     "index": 3,
+     "text": "bright",
+     "x0": 1035.74,
+     "x1": 1203.2,
+     "start_ms": 14200,
+     "end_ms": 14600
+    }
+   ],
+   "rubies": [],
+   "appear_ms": 6500,
+   "disappear_ms": 15400,
+   "sing_start_ms": 13000,
+   "sing_end_ms": 14600,
+   "fill": [
+    {
+     "time_ms": 13000,
+     "x": 835.28
+    },
+    {
+     "time_ms": 13400,
+     "x": 891.94
+    },
+    {
+     "time_ms": 13800,
+     "x": 959.44
+    },
+    {
+     "time_ms": 14200,
+     "x": 1035.74
+    },
+    {
+     "time_ms": 14600,
+     "x": 1208.53
+    }
+   ],
+   "clip_top": 597.23,
+   "clip_bottom": 669.97,
+   "clip_left": 830.61,
+   "clip_right": 1211.2
+  },
+  {
+   "id": "L003",
+   "source_line": "L003",
+   "part": 0,
+   "singer": "all",
+   "slot": "duet",
+   "row": 0,
+   "x": 76.8,
+   "y": 475.63,
+   "width": 264.0,
+   "height": 56.75,
+   "baseline": 523.25,
+   "text": "我們一起唱",
+   "runs": [
+    {
+     "text": "我",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "們",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "一",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "起",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    },
+    {
+     "text": "唱",
+     "family": "GenSenRounded2 TW B",
+     "ass_size": 56.75,
+     "spacing": 2.67
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "我",
+     "x0": 76.8,
+     "x1": 130.13,
+     "start_ms": 30000,
+     "end_ms": 30400
+    },
+    {
+     "index": 1,
+     "text": "們",
+     "x0": 130.13,
+     "x1": 183.47,
+     "start_ms": 30400,
+     "end_ms": 30800
+    },
+    {
+     "index": 2,
+     "text": "一",
+     "x0": 183.47,
+     "x1": 236.8,
+     "start_ms": 30800,
+     "end_ms": 31200
+    },
+    {
+     "index": 3,
+     "text": "起",
+     "x0": 236.8,
+     "x1": 290.13,
+     "start_ms": 31200,
+     "end_ms": 31600
+    },
+    {
+     "index": 4,
+     "text": "唱",
+     "x0": 290.13,
+     "x1": 340.8,
+     "start_ms": 31600,
+     "end_ms": 32000
+    }
+   ],
+   "rubies": [],
+   "appear_ms": 26500,
+   "disappear_ms": 32800,
+   "sing_start_ms": 30000,
+   "sing_end_ms": 32000,
+   "fill": [
+    {
+     "time_ms": 30000,
+     "x": 73.47
+    },
+    {
+     "time_ms": 30400,
+     "x": 130.13
+    },
+    {
+     "time_ms": 30800,
+     "x": 183.47
+    },
+    {
+     "time_ms": 31200,
+     "x": 236.8
+    },
+    {
+     "time_ms": 31600,
+     "x": 290.13
+    },
+    {
+     "time_ms": 32000,
+     "x": 346.13
+    }
+   ],
+   "clip_top": 467.63,
+   "clip_bottom": 540.37,
+   "clip_left": 68.8,
+   "clip_right": 348.8
+  }
+ ],
+ "countdowns": [
+  {
+   "line_id": "L001",
+   "appear_ms": 6500,
+   "dots": [
+    {
+     "x": 84.8,
+     "y": 440.9,
+     "radius": 8.0,
+     "off_ms": 7000
+    },
+    {
+     "x": 110.8,
+     "y": 440.9,
+     "radius": 8.0,
+     "off_ms": 8000
+    },
+    {
+     "x": 136.8,
+     "y": 440.9,
+     "radius": 8.0,
+     "off_ms": 9000
+    }
+   ]
+  },
+  {
+   "line_id": "L003",
+   "appear_ms": 26500,
+   "dots": [
+    {
+     "x": 84.8,
+     "y": 458.29,
+     "radius": 8.0,
+     "off_ms": 27000
+    },
+    {
+     "x": 110.8,
+     "y": 458.29,
+     "radius": 8.0,
+     "off_ms": 28000
+    },
+    {
+     "x": 136.8,
+     "y": 458.29,
+     "radius": 8.0,
+     "off_ms": 29000
+    }
+   ]
+  }
+ ],
+ "title_card": {
+  "start_ms": 300,
+  "end_ms": 6300,
+  "lines": [
+   {
+    "text": "測試歌曲",
+    "role": "title",
+    "x": 498.67,
+    "y": 183.36,
+    "width": 282.67,
+    "family": "GenSenRounded2 TW B",
+    "ass_size": 79.15
+   },
+   {
+    "text": "演唱 某歌手",
+    "role": "info",
+    "x": 552.88,
+    "y": 273.6,
+    "width": 174.23,
+    "family": "GenSenRounded2 TW B",
+    "ass_size": 37.33
+   },
+   {
+    "text": "作詞 詞人",
+    "role": "info",
+    "x": 569.55,
+    "y": 324.27,
+    "width": 140.9,
+    "family": "GenSenRounded2 TW B",
+    "ass_size": 37.33
+   }
+  ]
+ },
+ "missing_glyphs": []
+}

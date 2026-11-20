@@ -1,0 +1,12 @@
+# title: Synthetic zh-2000
+# artist: KaraForge Synth
+# lyricist: KaraForge contributors
+# composer: kfbench
+
+[男] 車窗上的雨滴排成一條線
+
+夜空裡的星星慢慢亮起來
+
+山谷裡傳來遙遠的回音
+
+夜空裡的星星慢慢亮起來

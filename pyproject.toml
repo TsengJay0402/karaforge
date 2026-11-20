@@ -19,13 +19,45 @@ classifiers = [
     "Topic :: Multimedia :: Video",
 ]
 dependencies = [
+    # core
     "numpy>=1.26",
     "platformdirs>=4.2",
     "pydantic>=2.7",
     "pyyaml>=6.0",
     "rich>=13.7",
     "typer>=0.12",
+    "httpx>=0.27",
+    # audio / DSP
+    "soundfile>=0.12",
+    "scipy>=1.11",
+    "librosa>=0.10.2",
+    # text
+    "pypinyin>=0.51",
+    "rapidfuzz>=3.9",
+    "opencc-python-reimplemented>=0.1.7",
+    # layout
+    "fonttools>=4.53",
+    "uharfbuzz>=0.39",
+    # models (weights are downloaded separately with `kf models download`)
+    "torch>=2.6",
+    "transformers>=4.44",
+    "faster-whisper>=1.1",
+    "audio-separator>=0.30",
+    "audioread>=3.0",  # imported by audio-separator but no longer pulled in via librosa 1.x
+    # server
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
 ]
+
+[project.optional-dependencies]
+# Pick the PyTorch build.  Without an extra you get the default PyPI wheel (CUDA-enabled on
+# Linux, MPS-enabled on macOS).  `--extra cpu` selects the much smaller CPU-only wheel;
+# `--extra cuda` pins the CUDA 12.6 wheel index (also what Windows + NVIDIA needs).
+# torchvision is listed only so that it follows the same wheel index as torch (it is pulled in
+# transitively by audio-separator's ONNX converter).
+cpu = ["torch>=2.6", "torchvision>=0.21"]
+cuda = ["torch>=2.6", "torchvision>=0.21"]
 
 [project.scripts]
 kf = "karaforge.cli:main"
@@ -40,7 +72,45 @@ dev = [
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "ruff>=0.6",
+    "scipy-stubs>=1.14; python_version >= '3.12'",
 ]
+# Synthetic benchmark generator (`kf bench --suite synthetic`): offline TTS + WORLD vocoder.
+# A dependency group rather than an extra because it is only meant to be used from a source
+# checkout (`uv sync --extra cpu --group bench`) and needs a spaCy model that is not on PyPI.
+bench = [
+    "kokoro>=0.9.4; python_version < '3.13'",
+    "misaki[zh,en]>=0.9.4; python_version < '3.13'",
+    "en-core-web-sm; python_version < '3.13'",
+    "pyworld>=0.3.5",
+    "setuptools<81",  # pyworld imports pkg_resources, which newer setuptools no longer ships
+]
+
+[tool.uv]
+conflicts = [[{ extra = "cpu" }, { extra = "cuda" }]]
+# torch 2.15.0 was published before a matching torchvision build existed on the PyTorch wheel
+# indexes; hold the lock at the last release with a complete, mutually compatible set.
+constraint-dependencies = ["torch<2.15"]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cuda", extra = "cuda", marker = "sys_platform != 'darwin'" },
+]
+torchvision = [
+    { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cuda", extra = "cuda", marker = "sys_platform != 'darwin'" },
+]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
 
 [build-system]
 requires = ["hatchling>=1.25"]
@@ -97,17 +167,20 @@ convention = "google"
 "typings/**" = ["D", "N", "E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["karaforge", "kfbench"]
+known-first-party = ["karaforge", "kfbench", "support"]
 
 # ------------------------------------------------------------------------ pyright
 [tool.pyright]
 include = ["engine", "bench", "tests"]
 exclude = ["**/__pycache__", "**/node_modules", ".venv", ".tools", "web"]
-extraPaths = ["engine", "bench"]
+extraPaths = ["engine", "bench", "tests"]
 venvPath = "."
 venv = ".venv"
 stubPath = "typings"
-pythonVersion = "3.11"
+# The type checker runs against the development interpreter (3.12): numpy >= 2.5 only ships
+# stubs that are valid on 3.12+.  Syntax compatibility with 3.11 is enforced by ruff
+# (target-version) and by running the test suite on 3.11 in CI.
+pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = "error"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -115,7 +188,7 @@ reportUnnecessaryTypeIgnoreComment = "error"
 # ------------------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["engine", "bench"]
+pythonpath = ["engine", "bench", "tests"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [
     "ffmpeg: needs a working ffmpeg/ffprobe with libass",

@@ -8,8 +8,8 @@ PYRIGHT := .venv/bin/pyright
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 
-setup: ## Install Python (CPU wheels) and web dependencies
-	uv sync --extra cpu
+setup: ## Install Python (CPU wheels, with benchmark tools) and web dependencies
+	uv sync --extra cpu --group bench
 	cd web && npm ci
 
 lint: ## ruff lint + format check

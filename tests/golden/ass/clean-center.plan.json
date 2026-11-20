@@ -1,0 +1,537 @@
+{
+ "version": 1,
+ "width": 1280,
+ "height": 720,
+ "duration_ms": 120000,
+ "style": {
+  "theme": "clean-center",
+  "font_family": "Noto Sans TC",
+  "font_ass_size": 75.3,
+  "ruby_ass_size": 31.62,
+  "letter_spacing": 1.33,
+  "outline": 2.67,
+  "shadow": 0.0,
+  "blur": 0.0,
+  "fade_ms": 250,
+  "unsung_fill": "#F2F2F2",
+  "unsung_outline": "#000000",
+  "shadow_color": "#00000000",
+  "slots": {
+   "male": [
+    "#FFD23F",
+    "#3A2A00"
+   ],
+   "female": [
+    "#FF9F6B",
+    "#3A1500"
+   ],
+   "duet": [
+    "#8BE28B",
+    "#0B2E0B"
+   ]
+  },
+  "duet_mode": "third",
+  "countdown_fill": "#FFD23F",
+  "countdown_outline": "#000000",
+  "card_fill": "#F2F2F2",
+  "card_outline": "#000000",
+  "card_accent": "#FFD23F"
+ },
+ "fonts": [
+  {
+   "family": "Noto Sans TC",
+   "file": "NotoSansTC-Bold.otf"
+  }
+ ],
+ "lines": [
+  {
+   "id": "L001",
+   "source_line": "L001",
+   "part": 0,
+   "singer": "m",
+   "slot": "male",
+   "row": 0,
+   "x": 480.67,
+   "y": 506.64,
+   "width": 318.67,
+   "height": 75.3,
+   "baseline": 566.96,
+   "text": "夜空裡的星星",
+   "runs": [
+    {
+     "text": "夜",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "空",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "裡",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "的",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "星",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "星",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "夜",
+     "x0": 480.67,
+     "x1": 534.0,
+     "start_ms": 10000,
+     "end_ms": 10400
+    },
+    {
+     "index": 1,
+     "text": "空",
+     "x0": 534.0,
+     "x1": 587.33,
+     "start_ms": 10400,
+     "end_ms": 10800
+    },
+    {
+     "index": 2,
+     "text": "裡",
+     "x0": 587.33,
+     "x1": 640.67,
+     "start_ms": 10800,
+     "end_ms": 11200
+    },
+    {
+     "index": 3,
+     "text": "的",
+     "x0": 640.67,
+     "x1": 694.0,
+     "start_ms": 11200,
+     "end_ms": 11600
+    },
+    {
+     "index": 4,
+     "text": "星",
+     "x0": 694.0,
+     "x1": 747.33,
+     "start_ms": 11600,
+     "end_ms": 12000
+    },
+    {
+     "index": 5,
+     "text": "星",
+     "x0": 747.33,
+     "x1": 799.33,
+     "start_ms": 12000,
+     "end_ms": 12400
+    }
+   ],
+   "rubies": [],
+   "appear_ms": 7000,
+   "disappear_ms": 15200,
+   "sing_start_ms": 10000,
+   "sing_end_ms": 12400,
+   "fill": [
+    {
+     "time_ms": 10000,
+     "x": 478.0
+    },
+    {
+     "time_ms": 10400,
+     "x": 534.0
+    },
+    {
+     "time_ms": 10800,
+     "x": 587.33
+    },
+    {
+     "time_ms": 11200,
+     "x": 640.67
+    },
+    {
+     "time_ms": 11600,
+     "x": 694.0
+    },
+    {
+     "time_ms": 12000,
+     "x": 747.33
+    },
+    {
+     "time_ms": 12400,
+     "x": 802.0
+    }
+   ],
+   "clip_top": 501.31,
+   "clip_bottom": 587.27,
+   "clip_left": 475.33,
+   "clip_right": 804.67
+  },
+  {
+   "id": "L002",
+   "source_line": "L002",
+   "part": 0,
+   "singer": "f",
+   "slot": "female",
+   "row": 1,
+   "x": 460.62,
+   "y": 600.24,
+   "width": 358.75,
+   "height": 75.3,
+   "baseline": 660.56,
+   "text": "慢慢 so bright",
+   "runs": [
+    {
+     "text": "慢",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "慢",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": " ",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "s",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "o",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": " ",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "b",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "r",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "i",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "g",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "h",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "t",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "慢",
+     "x0": 460.62,
+     "x1": 513.96,
+     "start_ms": 13000,
+     "end_ms": 13400
+    },
+    {
+     "index": 1,
+     "text": "慢 ",
+     "x0": 513.96,
+     "x1": 580.43,
+     "start_ms": 13400,
+     "end_ms": 13800
+    },
+    {
+     "index": 2,
+     "text": "so ",
+     "x0": 580.43,
+     "x1": 654.52,
+     "start_ms": 13800,
+     "end_ms": 14200
+    },
+    {
+     "index": 3,
+     "text": "bright",
+     "x0": 654.52,
+     "x1": 819.38,
+     "start_ms": 14200,
+     "end_ms": 14600
+    }
+   ],
+   "rubies": [],
+   "appear_ms": 7000,
+   "disappear_ms": 15200,
+   "sing_start_ms": 13000,
+   "sing_end_ms": 14600,
+   "fill": [
+    {
+     "time_ms": 13000,
+     "x": 457.95
+    },
+    {
+     "time_ms": 13400,
+     "x": 513.96
+    },
+    {
+     "time_ms": 13800,
+     "x": 580.43
+    },
+    {
+     "time_ms": 14200,
+     "x": 654.52
+    },
+    {
+     "time_ms": 14600,
+     "x": 822.05
+    }
+   ],
+   "clip_top": 594.91,
+   "clip_bottom": 680.87,
+   "clip_left": 455.29,
+   "clip_right": 824.71
+  },
+  {
+   "id": "L003",
+   "source_line": "L003",
+   "part": 0,
+   "singer": "all",
+   "slot": "duet",
+   "row": 0,
+   "x": 507.33,
+   "y": 506.64,
+   "width": 265.33,
+   "height": 75.3,
+   "baseline": 566.96,
+   "text": "我們一起唱",
+   "runs": [
+    {
+     "text": "我",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "們",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "一",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "起",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    },
+    {
+     "text": "唱",
+     "family": "Noto Sans TC",
+     "ass_size": 75.3,
+     "spacing": 1.33
+    }
+   ],
+   "tokens": [
+    {
+     "index": 0,
+     "text": "我",
+     "x0": 507.33,
+     "x1": 560.67,
+     "start_ms": 30000,
+     "end_ms": 30400
+    },
+    {
+     "index": 1,
+     "text": "們",
+     "x0": 560.67,
+     "x1": 614.0,
+     "start_ms": 30400,
+     "end_ms": 30800
+    },
+    {
+     "index": 2,
+     "text": "一",
+     "x0": 614.0,
+     "x1": 667.33,
+     "start_ms": 30800,
+     "end_ms": 31200
+    },
+    {
+     "index": 3,
+     "text": "起",
+     "x0": 667.33,
+     "x1": 720.67,
+     "start_ms": 31200,
+     "end_ms": 31600
+    },
+    {
+     "index": 4,
+     "text": "唱",
+     "x0": 720.67,
+     "x1": 772.67,
+     "start_ms": 31600,
+     "end_ms": 32000
+    }
+   ],
+   "rubies": [],
+   "appear_ms": 27000,
+   "disappear_ms": 32600,
+   "sing_start_ms": 30000,
+   "sing_end_ms": 32000,
+   "fill": [
+    {
+     "time_ms": 30000,
+     "x": 504.66
+    },
+    {
+     "time_ms": 30400,
+     "x": 560.67
+    },
+    {
+     "time_ms": 30800,
+     "x": 614.0
+    },
+    {
+     "time_ms": 31200,
+     "x": 667.33
+    },
+    {
+     "time_ms": 31600,
+     "x": 720.67
+    },
+    {
+     "time_ms": 32000,
+     "x": 775.34
+    }
+   ],
+   "clip_top": 501.31,
+   "clip_bottom": 587.27,
+   "clip_left": 502.0,
+   "clip_right": 778.0
+  }
+ ],
+ "countdowns": [
+  {
+   "line_id": "L001",
+   "appear_ms": 7000,
+   "dots": [
+    {
+     "x": 512.0,
+     "y": 488.64,
+     "radius": 7.33,
+     "off_ms": 8000
+    },
+    {
+     "x": 536.0,
+     "y": 488.64,
+     "radius": 7.33,
+     "off_ms": 9000
+    }
+   ]
+  },
+  {
+   "line_id": "L003",
+   "appear_ms": 27000,
+   "dots": [
+    {
+     "x": 538.67,
+     "y": 488.64,
+     "radius": 7.33,
+     "off_ms": 28000
+    },
+    {
+     "x": 562.67,
+     "y": 488.64,
+     "radius": 7.33,
+     "off_ms": 29000
+    }
+   ]
+  }
+ ],
+ "title_card": {
+  "start_ms": 300,
+  "end_ms": 6300,
+  "lines": [
+   {
+    "text": "測試歌曲",
+    "role": "title",
+    "x": 501.33,
+    "y": 200.32,
+    "width": 277.33,
+    "family": "Noto Sans TC",
+    "ass_size": 100.39
+   },
+   {
+    "text": "演唱 某歌手",
+    "role": "info",
+    "x": 556.37,
+    "y": 296.11,
+    "width": 167.26,
+    "family": "Noto Sans TC",
+    "ass_size": 46.34
+   },
+   {
+    "text": "作詞 詞人",
+    "role": "info",
+    "x": 572.37,
+    "y": 344.11,
+    "width": 135.26,
+    "family": "Noto Sans TC",
+    "ass_size": 46.34
+   }
+  ]
+ },
+ "missing_glyphs": []
+}

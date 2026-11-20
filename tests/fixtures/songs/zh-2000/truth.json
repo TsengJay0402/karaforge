@@ -1,0 +1,339 @@
+{
+ "generator_version": "1",
+ "song_id": "zh-2000",
+ "language": "zh",
+ "seed": 2000,
+ "title": "Synthetic zh-2000",
+ "duration_ms": 48500,
+ "bpm": 90.0,
+ "key": 10,
+ "voices": {
+  "f": "zf_xiaobei",
+  "m": "zm_yunjian"
+ },
+ "sections": [
+  {
+   "kind": "intro",
+   "start_bar": 0,
+   "bars": 2
+  },
+  {
+   "kind": "verse",
+   "start_bar": 2,
+   "bars": 2
+  },
+  {
+   "kind": "chorus",
+   "start_bar": 4,
+   "bars": 3
+  },
+  {
+   "kind": "interlude",
+   "start_bar": 7,
+   "bars": 4
+  },
+  {
+   "kind": "verse",
+   "start_bar": 11,
+   "bars": 3
+  },
+  {
+   "kind": "chorus",
+   "start_bar": 14,
+   "bars": 3
+  },
+  {
+   "kind": "outro",
+   "start_bar": 17,
+   "bars": 1
+  }
+ ],
+ "lines": [
+  {
+   "singer": "m",
+   "paragraph": 0,
+   "text": "車窗上的雨滴排成一條線",
+   "tokens": [
+    {
+     "text": "車",
+     "start_ms": 5670,
+     "end_ms": 5763,
+     "midi": 43
+    },
+    {
+     "text": "窗",
+     "start_ms": 5837,
+     "end_ms": 5945,
+     "midi": 48
+    },
+    {
+     "text": "上",
+     "start_ms": 6003,
+     "end_ms": 6104,
+     "midi": 53
+    },
+    {
+     "text": "的",
+     "start_ms": 6169,
+     "end_ms": 6279,
+     "midi": 53
+    },
+    {
+     "text": "雨",
+     "start_ms": 6335,
+     "end_ms": 6441,
+     "midi": 50
+    },
+    {
+     "text": "滴",
+     "start_ms": 6502,
+     "end_ms": 6603,
+     "midi": 48
+    },
+    {
+     "text": "排",
+     "start_ms": 6667,
+     "end_ms": 6778,
+     "midi": 48
+    },
+    {
+     "text": "成",
+     "start_ms": 6833,
+     "end_ms": 6944,
+     "midi": 46
+    },
+    {
+     "text": "一",
+     "start_ms": 7002,
+     "end_ms": 7112,
+     "midi": 48
+    },
+    {
+     "text": "條",
+     "start_ms": 7169,
+     "end_ms": 7280,
+     "midi": 50
+    },
+    {
+     "text": "線",
+     "start_ms": 7338,
+     "end_ms": 8433,
+     "midi": 50
+    }
+   ]
+  },
+  {
+   "singer": "m",
+   "paragraph": 1,
+   "text": "夜空裡的星星慢慢亮起來",
+   "tokens": [
+    {
+     "text": "夜",
+     "start_ms": 11003,
+     "end_ms": 11354,
+     "midi": 41
+    },
+    {
+     "text": "空",
+     "start_ms": 11337,
+     "end_ms": 11684,
+     "midi": 43
+    },
+    {
+     "text": "裡",
+     "start_ms": 11670,
+     "end_ms": 12352,
+     "midi": 48
+    },
+    {
+     "text": "的",
+     "start_ms": 12337,
+     "end_ms": 13032,
+     "midi": 50
+    },
+    {
+     "text": "星",
+     "start_ms": 13004,
+     "end_ms": 13682,
+     "midi": 53
+    },
+    {
+     "text": "星",
+     "start_ms": 13671,
+     "end_ms": 14018,
+     "midi": 53
+    },
+    {
+     "text": "慢",
+     "start_ms": 14003,
+     "end_ms": 14347,
+     "midi": 53
+    },
+    {
+     "text": "慢",
+     "start_ms": 14336,
+     "end_ms": 14680,
+     "midi": 53
+    },
+    {
+     "text": "亮",
+     "start_ms": 14668,
+     "end_ms": 15014,
+     "midi": 53
+    },
+    {
+     "text": "起",
+     "start_ms": 15003,
+     "end_ms": 15688,
+     "midi": 53
+    },
+    {
+     "text": "來",
+     "start_ms": 15668,
+     "end_ms": 16917,
+     "midi": 53
+    }
+   ]
+  },
+  {
+   "singer": "m",
+   "paragraph": 2,
+   "text": "山谷裡傳來遙遠的回音",
+   "tokens": [
+    {
+     "text": "山",
+     "start_ms": 29671,
+     "end_ms": 30018,
+     "midi": 43
+    },
+    {
+     "text": "谷",
+     "start_ms": 30003,
+     "end_ms": 30346,
+     "midi": 41
+    },
+    {
+     "text": "裡",
+     "start_ms": 30338,
+     "end_ms": 30685,
+     "midi": 46
+    },
+    {
+     "text": "傳",
+     "start_ms": 30670,
+     "end_ms": 31025,
+     "midi": 43
+    },
+    {
+     "text": "來",
+     "start_ms": 31004,
+     "end_ms": 31359,
+     "midi": 41
+    },
+    {
+     "text": "遙",
+     "start_ms": 31338,
+     "end_ms": 32021,
+     "midi": 43
+    },
+    {
+     "text": "遠",
+     "start_ms": 32004,
+     "end_ms": 32348,
+     "midi": 41
+    },
+    {
+     "text": "的",
+     "start_ms": 32339,
+     "end_ms": 32696,
+     "midi": 36
+    },
+    {
+     "text": "回",
+     "start_ms": 32670,
+     "end_ms": 33014,
+     "midi": 38
+    },
+    {
+     "text": "音",
+     "start_ms": 33003,
+     "end_ms": 34251,
+     "midi": 38
+    }
+   ]
+  },
+  {
+   "singer": "m",
+   "paragraph": 3,
+   "text": "夜空裡的星星慢慢亮起來",
+   "tokens": [
+    {
+     "text": "夜",
+     "start_ms": 37670,
+     "end_ms": 38021,
+     "midi": 41
+    },
+    {
+     "text": "空",
+     "start_ms": 38004,
+     "end_ms": 38350,
+     "midi": 43
+    },
+    {
+     "text": "裡",
+     "start_ms": 38337,
+     "end_ms": 39019,
+     "midi": 48
+    },
+    {
+     "text": "的",
+     "start_ms": 39004,
+     "end_ms": 39699,
+     "midi": 50
+    },
+    {
+     "text": "星",
+     "start_ms": 39671,
+     "end_ms": 40348,
+     "midi": 53
+    },
+    {
+     "text": "星",
+     "start_ms": 40338,
+     "end_ms": 40684,
+     "midi": 53
+    },
+    {
+     "text": "慢",
+     "start_ms": 40669,
+     "end_ms": 41013,
+     "midi": 53
+    },
+    {
+     "text": "慢",
+     "start_ms": 41003,
+     "end_ms": 41347,
+     "midi": 53
+    },
+    {
+     "text": "亮",
+     "start_ms": 41335,
+     "end_ms": 41680,
+     "midi": 53
+    },
+    {
+     "text": "起",
+     "start_ms": 41670,
+     "end_ms": 42354,
+     "midi": 53
+    },
+    {
+     "text": "來",
+     "start_ms": 42335,
+     "end_ms": 43584,
+     "midi": 53
+    }
+   ]
+  }
+ ]
+}

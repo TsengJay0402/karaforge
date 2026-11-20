@@ -1,0 +1,64 @@
+# 粉圓流行:圓潤字體、粉彩配色,合唱以上下雙色呈現。
+format: 1
+name: pop-round
+title: 粉圓流行
+description: 使用 jf open 粉圓的可愛圓體樣式,粗白框與粉彩填色;合唱行上半男色、下半女色。
+reference_height: 1080
+font:
+  family: jf-openhuninn-2.1
+  fallback: Noto Sans TC
+  size: 88
+  letter_spacing: 3
+text:
+  outline: 7
+  shadow: 0
+  blur: 0
+colors:
+  unsung: { fill: "#FFFFFF", outline: "#3A2A4A" }
+  shadow: "#00000000"
+  slots:
+    male: { fill: "#38C6F4", outline: "#FFFFFF" }
+    female: { fill: "#FF7EB6", outline: "#FFFFFF" }
+    duet: { fill: "#FFC83D", outline: "#FFFFFF" }
+  duet_mode: dual
+layout:
+  rows:
+    - { y: 0.73, align: left, margin: 0.07 }
+    - { y: 0.88, align: right, margin: 0.07 }
+  max_width: 0.84
+  lead_in_ms: 1500
+  first_lead_in_ms: 3500
+  swap_delay_ms: 350
+  linger_ms: 800
+  fade_ms: 200
+  section_gap_ms: 4000
+ruby:
+  enabled: false
+  scale: 0.4
+  gap: 2
+  min_spacing: 6
+countdown:
+  enabled: true
+  min_gap_ms: 4000
+  dots: 3
+  interval_ms: 1000
+  use_beats: true
+  radius: 14
+  spacing: 16
+  offset: 18
+  fill: "#FF7EB6"
+  outline: "#FFFFFF"
+title_card:
+  enabled: true
+  y: 0.4
+  title_size: 116
+  info_size: 54
+  line_gap: 28
+  max_duration_ms: 6000
+  min_duration_ms: 1500
+  fill: "#FFFFFF"
+  outline: "#3A2A4A"
+  accent: "#FFC83D"
+background:
+  color: "#2B2140"
+  dim_bottom: 0.35

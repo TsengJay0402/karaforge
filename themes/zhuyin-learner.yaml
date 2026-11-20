@@ -1,0 +1,64 @@
+# 注音學習:每個字上方顯示注音,字距加大,給語言學習者與兒童使用。
+format: 1
+name: zhuyin-learner
+title: 注音學習
+description: 經典 KTV 樣式加上逐字讀音(注音或拼音),字級略小、行距加大;給語言學習者與兒童歌曲使用。
+reference_height: 1080
+font:
+  family: GenSenRounded2 TW B
+  fallback: Noto Sans TC
+  size: 76
+  letter_spacing: 4
+text:
+  outline: 5
+  shadow: 3
+  blur: 0
+colors:
+  unsung: { fill: "#FFFFFF", outline: "#101010" }
+  shadow: "#000000A0"
+  slots:
+    male: { fill: "#2F7BFF", outline: "#FFFFFF" }
+    female: { fill: "#FF4F9A", outline: "#FFFFFF" }
+    duet: { fill: "#35D05B", outline: "#FFFFFF" }
+  duet_mode: third
+layout:
+  rows:
+    - { y: 0.7, align: left, margin: 0.06 }
+    - { y: 0.88, align: right, margin: 0.06 }
+  max_width: 0.86
+  lead_in_ms: 1800
+  first_lead_in_ms: 3500
+  swap_delay_ms: 350
+  linger_ms: 800
+  fade_ms: 150
+  section_gap_ms: 4000
+ruby:
+  enabled: true
+  scale: 0.36
+  gap: 3
+  min_spacing: 8
+countdown:
+  enabled: true
+  min_gap_ms: 4000
+  dots: 3
+  interval_ms: 1000
+  use_beats: true
+  radius: 12
+  spacing: 15
+  offset: 14
+  fill: "#FFE14D"
+  outline: "#202020"
+title_card:
+  enabled: true
+  y: 0.38
+  title_size: 106
+  info_size: 50
+  line_gap: 26
+  max_duration_ms: 6000
+  min_duration_ms: 1500
+  fill: "#FFFFFF"
+  outline: "#101010"
+  accent: "#FFE14D"
+background:
+  color: "#12141C"
+  dim_bottom: 0.45

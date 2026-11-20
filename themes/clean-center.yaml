@@ -1,0 +1,64 @@
+# 簡潔置中:黑體、兩排都置中,適合歌詞影片與教會詩歌投影。
+format: 1
+name: clean-center
+title: 簡潔置中
+description: Noto Sans 黑體、細框、兩排置中;沒有陰影,唱過的字變成暖黃色。適合歌詞影片或詩歌投影。
+reference_height: 1080
+font:
+  family: Noto Sans TC
+  fallback: GenSenRounded2 TW B
+  size: 78
+  letter_spacing: 2
+text:
+  outline: 4
+  shadow: 0
+  blur: 0
+colors:
+  unsung: { fill: "#F2F2F2", outline: "#000000" }
+  shadow: "#00000000"
+  slots:
+    male: { fill: "#FFD23F", outline: "#3A2A00" }
+    female: { fill: "#FF9F6B", outline: "#3A1500" }
+    duet: { fill: "#8BE28B", outline: "#0B2E0B" }
+  duet_mode: third
+layout:
+  rows:
+    - { y: 0.76, align: center, margin: 0.05 }
+    - { y: 0.89, align: center, margin: 0.05 }
+  max_width: 0.88
+  lead_in_ms: 1200
+  first_lead_in_ms: 3000
+  swap_delay_ms: 300
+  linger_ms: 600
+  fade_ms: 250
+  section_gap_ms: 4000
+ruby:
+  enabled: false
+  scale: 0.42
+  gap: 2
+  min_spacing: 6
+countdown:
+  enabled: true
+  min_gap_ms: 4000
+  dots: 3
+  interval_ms: 1000
+  use_beats: true
+  radius: 11
+  spacing: 14
+  offset: 16
+  fill: "#FFD23F"
+  outline: "#000000"
+title_card:
+  enabled: true
+  y: 0.42
+  title_size: 104
+  info_size: 48
+  line_gap: 24
+  max_duration_ms: 6000
+  min_duration_ms: 1500
+  fill: "#F2F2F2"
+  outline: "#000000"
+  accent: "#FFD23F"
+background:
+  color: "#101014"
+  dim_bottom: 0.5

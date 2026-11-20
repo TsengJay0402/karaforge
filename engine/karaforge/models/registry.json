@@ -1,0 +1,269 @@
+{
+ "generated": "2026-11-19",
+ "models": [
+  {
+   "id": "whisper-tiny",
+   "kind": "asr",
+   "title": "Whisper tiny (CTranslate2)",
+   "license": "MIT",
+   "license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+   "homepage": "https://huggingface.co/Systran/faster-whisper-tiny",
+   "revision": "d90ca5fe260221311c53c58e660288d3deb8d356",
+   "commercial_use": true,
+   "directory": null,
+   "requires": [],
+   "note_zh": "",
+   "note_en": "",
+   "files": [
+    {
+     "path": "config.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-tiny/resolve/d90ca5fe260221311c53c58e660288d3deb8d356/config.json",
+     "size": 2249,
+     "sha256": "a73a28cdfe1c43ccc7202fa333d1f89c202477271407ae9a7f19afa52039cac8"
+    },
+    {
+     "path": "model.bin",
+     "url": "https://huggingface.co/Systran/faster-whisper-tiny/resolve/d90ca5fe260221311c53c58e660288d3deb8d356/model.bin",
+     "size": 75538270,
+     "sha256": "dcb76c6586fc06cbdac6dd21f14cfd129cc4cdd9dce19bf4ffa62e59cbe6e6d1"
+    },
+    {
+     "path": "tokenizer.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-tiny/resolve/d90ca5fe260221311c53c58e660288d3deb8d356/tokenizer.json",
+     "size": 2203239,
+     "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+    },
+    {
+     "path": "vocabulary.txt",
+     "url": "https://huggingface.co/Systran/faster-whisper-tiny/resolve/d90ca5fe260221311c53c58e660288d3deb8d356/vocabulary.txt",
+     "size": 459861,
+     "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+    }
+   ]
+  },
+  {
+   "id": "whisper-base",
+   "kind": "asr",
+   "title": "Whisper base (CTranslate2)",
+   "license": "MIT",
+   "license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+   "homepage": "https://huggingface.co/Systran/faster-whisper-base",
+   "revision": "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66",
+   "commercial_use": true,
+   "directory": null,
+   "requires": [],
+   "note_zh": "",
+   "note_en": "",
+   "files": [
+    {
+     "path": "config.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-base/resolve/ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66/config.json",
+     "size": 2309,
+     "sha256": "56a6d8110d311f19c8f0471e562832c7527f146b567275bfca59fcf7c184da9a"
+    },
+    {
+     "path": "model.bin",
+     "url": "https://huggingface.co/Systran/faster-whisper-base/resolve/ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66/model.bin",
+     "size": 145217532,
+     "sha256": "d01c3014881c9c6f3133c182f3d2887eb6ca1c789a7538c5c007196857a0a6a9"
+    },
+    {
+     "path": "tokenizer.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-base/resolve/ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66/tokenizer.json",
+     "size": 2203239,
+     "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+    },
+    {
+     "path": "vocabulary.txt",
+     "url": "https://huggingface.co/Systran/faster-whisper-base/resolve/ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66/vocabulary.txt",
+     "size": 459861,
+     "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+    }
+   ]
+  },
+  {
+   "id": "whisper-small",
+   "kind": "asr",
+   "title": "Whisper small (CTranslate2)",
+   "license": "MIT",
+   "license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+   "homepage": "https://huggingface.co/Systran/faster-whisper-small",
+   "revision": "536b0662742c02347bc0e980a01041f333bce120",
+   "commercial_use": true,
+   "directory": null,
+   "requires": [],
+   "note_zh": "",
+   "note_en": "",
+   "files": [
+    {
+     "path": "config.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/config.json",
+     "size": 2370,
+     "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828"
+    },
+    {
+     "path": "model.bin",
+     "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/model.bin",
+     "size": 483546902,
+     "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671"
+    },
+    {
+     "path": "tokenizer.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/tokenizer.json",
+     "size": 2203239,
+     "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+    },
+    {
+     "path": "vocabulary.txt",
+     "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/vocabulary.txt",
+     "size": 459861,
+     "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+    }
+   ]
+  },
+  {
+   "id": "whisper-medium",
+   "kind": "asr",
+   "title": "Whisper medium (CTranslate2)",
+   "license": "MIT",
+   "license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+   "homepage": "https://huggingface.co/Systran/faster-whisper-medium",
+   "revision": "08e178d48790749d25932bbc082711ddcfdfbc4f",
+   "commercial_use": true,
+   "directory": null,
+   "requires": [],
+   "note_zh": "",
+   "note_en": "",
+   "files": [
+    {
+     "path": "config.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/config.json",
+     "size": 2257,
+     "sha256": "3622a2ddc41ec0e0fd4e68c13c6830f03b90c38d89aaad184de02c8c642cf807"
+    },
+    {
+     "path": "model.bin",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/model.bin",
+     "size": 1527906378,
+     "sha256": "9b45e1009dcc4ab601eff815b61d80e60ce3fd8c74c1a14f4a282258286b51ae"
+    },
+    {
+     "path": "tokenizer.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/tokenizer.json",
+     "size": 2203239,
+     "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+    },
+    {
+     "path": "vocabulary.txt",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/vocabulary.txt",
+     "size": 459861,
+     "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+    }
+   ]
+  },
+  {
+   "id": "whisper-large-v3-turbo",
+   "kind": "asr",
+   "title": "Whisper large-v3-turbo (CTranslate2)",
+   "license": "MIT",
+   "license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+   "homepage": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+   "revision": "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+   "commercial_use": true,
+   "directory": null,
+   "requires": [],
+   "note_zh": "",
+   "note_en": "",
+   "files": [
+    {
+     "path": "config.json",
+     "url": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/config.json",
+     "size": 2263,
+     "sha256": "b0253ea6c0d3bea6b1e19e91a02acfd3b53f4467362efcb5a3e6b16c9b3a9b7e"
+    },
+    {
+     "path": "model.bin",
+     "url": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/model.bin",
+     "size": 1617884929,
+     "sha256": "e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da"
+    },
+    {
+     "path": "preprocessor_config.json",
+     "url": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/preprocessor_config.json",
+     "size": 340,
+     "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+    },
+    {
+     "path": "tokenizer.json",
+     "url": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/tokenizer.json",
+     "size": 2710337,
+     "sha256": "297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd"
+    },
+    {
+     "path": "vocabulary.json",
+     "url": "https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/vocabulary.json",
+     "size": 1068114,
+     "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+    }
+   ]
+  },
+  {
+   "id": "uvr-metadata",
+   "kind": "support",
+   "title": "UVR model parameter tables",
+   "license": "MIT",
+   "license_url": "https://github.com/Anjok07/ultimatevocalremovergui/blob/master/LICENSE",
+   "homepage": "https://github.com/TRvlvr/application_data",
+   "revision": "3826b05b570dbd4fbedbc807758803b35348ba1b",
+   "commercial_use": true,
+   "directory": "uvr",
+   "requires": [],
+   "note_zh": "audio-separator 讀取模型參數用的對照表。",
+   "note_en": "Lookup tables that audio-separator needs to configure UVR models.",
+   "files": [
+    {
+     "path": "download_checks.json",
+     "url": "https://raw.githubusercontent.com/TRvlvr/application_data/3826b05b570dbd4fbedbc807758803b35348ba1b/filelists/download_checks.json",
+     "size": 28267,
+     "sha256": "d3622e1fa19c161d3cf704927711b453d593a3f1eb0f2e0838c3136907935151"
+    },
+    {
+     "path": "mdx_model_data.json",
+     "url": "https://raw.githubusercontent.com/TRvlvr/application_data/3826b05b570dbd4fbedbc807758803b35348ba1b/mdx_model_data/model_data_new.json",
+     "size": 15358,
+     "sha256": "1aca8f9bcc57233bc714029663a9ec2345d9c7721f91e5e08f46392a879c6a9a"
+    },
+    {
+     "path": "vr_model_data.json",
+     "url": "https://raw.githubusercontent.com/TRvlvr/application_data/3826b05b570dbd4fbedbc807758803b35348ba1b/vr_model_data/model_data_new.json",
+     "size": 4380,
+     "sha256": "6a2021b9aa355c10f845b68c73944d47bd9e1fdf37b8a584b14ce8f88b09bb2f"
+    }
+   ]
+  },
+  {
+   "id": "uvr-mdxnet-kara-2",
+   "kind": "separator",
+   "title": "UVR MDX-Net Karaoke 2",
+   "license": "MIT",
+   "license_url": "https://github.com/Anjok07/ultimatevocalremovergui/blob/master/LICENSE",
+   "homepage": "https://github.com/Anjok07/ultimatevocalremovergui",
+   "revision": "all_public_uvr_models",
+   "commercial_use": true,
+   "directory": "uvr",
+   "requires": [
+    "uvr-metadata"
+   ],
+   "note_zh": "UVR 專案訓練的模型;使用時請依 UVR 的要求標示出處。伴唱型:和聲保留在伴奏裡。",
+   "note_en": "Trained by the UVR project; please credit UVR when you use it. Karaoke type: backing vocals stay in the accompaniment.",
+   "files": [
+    {
+     "path": "UVR_MDXNET_KARA_2.onnx",
+     "url": "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_KARA_2.onnx",
+     "size": 52786726,
+     "sha256": "bf32e15105a09c0f7dddd2b67346146334d6f3ecb399ed7638eba2ab07cbf5f4"
+    }
+   ]
+  }
+ ]
+}
