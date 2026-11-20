@@ -2,9 +2,9 @@
 
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本號依 [語意化版本](https://semver.org/lang/zh-TW/)。
 
-## [0.1.0] - 2026-11-21
+## [未發布] 準備中的 0.1.0
 
-第一個版本。完整的驗證範圍、評測數字與已知限制見 [`REPORT.md`](REPORT.md)。
+尚未發布：版號仍是 `0.1.0.dev0`，Docker 映像、示範影片與最終報告還沒完成（見 [`PROGRESS.md`](PROGRESS.md)）。
 
 ### 引擎
 
@@ -44,7 +44,7 @@
 
 ### 已知限制
 
-見 [`REPORT.md`](REPORT.md) 的「已知限制」與各文件的對應章節。最重要的幾項：
+見 [`PROGRESS.md`](PROGRESS.md) 與各文件的對應章節。最重要的幾項：
 
 - 所有準確度數字都來自**合成**歌聲，真實歌曲上沒有量測過。
 - GPU（CUDA／MPS）、硬體編碼、macOS、Windows 都沒有實測。

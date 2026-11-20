@@ -2,32 +2,48 @@
 
 > 依規格 §12 持續維護。最新狀態在最上面；每個里程碑的驗收結果記錄在對應段落。
 
-## 目前狀態（2026-11-21，工作因用量上限中斷時的實際狀態）
+## 目前狀態（2026-11-21 04:40，工作因用量上限再次中斷時的實際狀態）
 
-- **M2 對齊品質**：程式已完成並在 commit `ac5bfce` 凍結；dev 分組的比較與校正記錄在 `docs/adr/0006`。
-  **test 分組的完整評測還在背景執行中**（中斷時完成 17/120 個音檔，輸出在 `bench/_runs/reports/test-v1/`，
-  紀錄檔 `.tools/bench-test-v1.log`）。報告尚未產生，所以 **§10.4 的目標是否達成還沒有結論**；
-  `docs/benchmark-report.md` 與 ADR 0006 最後一節（`ctc-mms` 校正後的 dev 結果）尚未填入。
-- **M3 排版與輸出**：MKV、各種匯出／匯入格式、專案格式 v2 已完成並有測試（見 ADR 0008）；尚未寫 M3 的驗收紀錄。
-- **M4 Web App**：後端（FastAPI、工作佇列、SSE、`kf serve`）已完成並有測試（commit `17cacb4`）。
-  前端**做到一半，目前無法建置**：API client、i18n、編輯邏輯（doc／history／store／transport／timeline 幾何，
-  61 個 Vitest 測試通過）、專案列表、新增精靈、處理進度頁、編輯器外殼、工具列、對話框、預覽（JASSUB）、歌詞面板已寫好，
-  但 `Timeline.tsx`、`ThemePanel.tsx` 與 CSS 還沒寫（`Editor.tsx` 已經 import 它們），也還沒有做過任何瀏覽器實測、
-  Playwright E2E 與「預覽對匯出」的影格比對。JASSUB 預覽元件**完全沒有實際執行過**。
-- **M5、M6**：尚未開始（無歌詞 ASR 流程、注音／拼音與破音字測試集、`kf batch`、`kf doctor`、`kf align`、
-  Docker 映像實際建置、完整文件、LICENSES.md、CHANGELOG、示範影片、REPORT.md）。
+**已完成並實際驗證過**
+
+- **M2**：test 分組完整評測（120 個音檔 × 12 種設定）跑完。規格 §10.4 四項目標全部達成（中文 10 dB：中位數 11 ms、P95 86 ms、
+  需修正 2.8%、鎖定 5% 隨機錨點後 3.0%）。評測同時揭露「錨點反而讓其餘的字變差」的缺陷，已在 dev 上找出原因並修正（演算法第 8 版），
+  再於 test 上重測；完整經過與所有不好看的數字都寫在 `docs/benchmark.md`。原始報告：`docs/benchmark-report.md`（第 7 版、完整矩陣）、
+  `docs/benchmark-report-anchors.md`（第 8 版、錨點），原始資料在 `bench/reports/`。
+- **M3**：排版、ASS、MKV 雙音軌、各種匯入匯出（先前已完成）；單元 755、整合與視覺 37 個測試在本次修改後重新執行通過。
+- **M4**：Web App 完成。Vitest 69 個通過；Playwright 14 個（不含需要模型的那一個）在 03:24 通過，包含預覽對匯出的影格比對。
+- **M5**：`kf doctor`、`kf align --respect-locked`、`kf batch`、無歌詞流程（真實模型的整合測試 3 個通過；草稿的字元錯誤率如實量測：
+  `cpu-lite` 83.7%，最好的模型約 49%）、注音／拼音（破音字測試集 171 句，準確率 92.4%，未經調整的基準 88.3%，見 `docs/ruby.md`）。
+- **文件**：README（中、英）、cli、lyrics-format、project-format、themes、profiles、architecture、adapters、ruby、LICENSES、
+  alignment、benchmark、ADR 0001–0009、CHANGELOG（草稿）。
+
+**寫好了但還沒有執行或驗證（不要當成已完成）**
+
+- 03:24 之後的修改（換段規則、介面標點、讀音面板以外的調整、無提示辨識的設定）之後，**Playwright 沒有重跑**。
+- `web/e2e/process.spec.ts`（真實模型：上傳 → 處理 → 拖曳 → 重新對齊 → 匯出 → 檢查檔案，規格 §11 要求的那一條）**從來沒有執行過**。
+  執行方式：`cd web && KARAFORGE_E2E_MODELS=1 npm run e2e -- process`。
+- `docker/Dockerfile` 與 `docker/docker-compose.yml`：hadolint 通過、`docker compose config` 通過，**映像沒有建置過**（CPU 與 CUDA 都沒有）。
+- CI workflow 沒有在 GitHub 上跑過；Python 3.11 沒有實際跑過測試。
+
+**還沒做**
+
+- `REPORT.md`（最終報告）。
+- `examples/`（示範專案、MP4、MKV）與 README 用的影片截圖。
+- 版號改成 0.1.0 並打 tag；依 README 從零安裝的實測；覆蓋率與程式碼行數的統計。
+- 引擎訊息（CLI／伺服器）的全形標點整理：腳本在 `.tmp/fullwidth_py.py`（未套用；需要略過三引號字串並處理一個 LRC 格式說明的特例）。
+- 硬體編碼器選項沒有開放成設定；分離階段的細部進度沒有做。
 
 ## 里程碑
 
 | 里程碑 | 狀態 | 備註 |
 |---|---|---|
-| M0 骨架 | 完成 | 驗收見下方 |
-| M1 引擎核心 | 完成 | 驗收見下方 |
-| M2 對齊品質 | 進行中 | 三段式演算法骨架、信心度、錨點重對齊已有；待第二種 aligner、評測 |
-| M3 KTV 排版與輸出 | 未開始 | |
-| M4 Web App | 未開始 | |
-| M5 進階功能 | 未開始 | |
-| M6 打磨與發佈 | 未開始 | |
+| M0 骨架 | 完成 | |
+| M1 引擎核心 | 完成 | |
+| M2 對齊品質 | 完成 | 目標達成；錨點的效果有限，如實記錄 |
+| M3 KTV 排版與輸出 | 完成 | |
+| M4 Web App | 大致完成 | 需要模型的端對端測試尚未執行；最新修改後 Playwright 未重跑 |
+| M5 進階功能 | 完成 | 各功能有測試；準確率如實報告 |
+| M6 打磨與發佈 | 未完成 | 文件完成；Docker 建置、示範影片、REPORT.md、版號、從零安裝驗證未做 |
 
 ## 驗收紀錄
 

@@ -103,9 +103,17 @@ class FasterWhisperTranscriber:
         progress: ProgressFn,
         cancel: CancelToken,
     ) -> Transcript:
-        """Transcribe 16 kHz mono audio; ``prompt`` (the known lyrics) biases every window."""
+        """Transcribe 16 kHz mono audio; ``prompt`` (the known lyrics) biases every window.
+
+        Without a prompt the transcript is going to be the lyric draft, and Whisper's
+        "no speech" gate is switched off: the gate was made for talk, takes sustained singing
+        for silence and drops whole 30-second windows of a song.  What is recognised where
+        nobody sings is removed afterwards, with the voice-activity regions
+        (:mod:`karaforge.align.draft`).
+        """
         model = load_whisper(self._model_id, self._device)
         duration = max(1e-3, audio.size / MODEL_RATE)
+        options: dict[str, Any] = {} if prompt else {"no_speech_threshold": None}
         segments, info = model.transcribe(
             audio,
             language=whisper_language(language),
@@ -114,6 +122,7 @@ class FasterWhisperTranscriber:
             condition_on_previous_text=False,
             vad_filter=False,
             hotwords=prompt or None,
+            **options,
         )
         collected: list[AsrSegment] = []
         for segment in segments:

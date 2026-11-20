@@ -111,11 +111,18 @@ class AsrStage(Stage):
         """The vocal stem, the recogniser and the prompt derived from the lyrics."""
         project = ctx.store.load()
         transcriber = create_transcriber(ctx.profile.asr, resolve_device(ctx.profile.device))
+        prompt = self._prompt(ctx, project)
+        params: JsonDict = {"beam_size": ctx.profile.asr.beam_size}
+        if prompt is None:
+            # Recognition without a prompt changed (the "no speech" gate is off, see the
+            # adapter).  Only those runs get a new cache key; transcripts made with a prompt
+            # are what they always were and stay valid.
+            params["no_speech_gate"] = False
         return StageInputs(
             files={"vocals": ctx.paths.media / "vocals.wav"},
-            params={"beam_size": ctx.profile.asr.beam_size},
+            params=params,
             adapters={"asr": transcriber.info.tag},
-            data={"language": project.meta.language, "prompt": self._prompt(ctx, project)},
+            data={"language": project.meta.language, "prompt": prompt},
         )
 
     def run(self, ctx: StageContext, out_dir: Path) -> JsonDict:

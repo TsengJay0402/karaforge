@@ -113,7 +113,7 @@ describe('new project wizard', () => {
     render(<App />)
     const file = new File(['abc'], '我的歌.mp3', { type: 'audio/mpeg' })
     await userEvent.upload(screen.getByTestId('media-input'), file)
-    expect(screen.getByText(/已選擇:我的歌.mp3/)).toBeInTheDocument()
+    expect(screen.getByText(/已選擇：我的歌.mp3/)).toBeInTheDocument()
     expect(screen.getByLabelText('歌名')).toHaveValue('我的歌')
     await userEvent.type(screen.getByRole('textbox', { name: '貼上歌詞' }), '第一句')
     await userEvent.click(await screen.findByText('快速'))
@@ -146,7 +146,7 @@ describe('new project wizard', () => {
     window.history.pushState({}, '', '/new')
     render(<App />)
     await userEvent.upload(screen.getByTestId('media-input'), new File(['abc'], '清唱.mp3', { type: 'audio/mpeg' }))
-    await userEvent.click(screen.getByRole('radio', { name: '沒有歌詞,用 AI 辨識' }))
+    await userEvent.click(screen.getByRole('radio', { name: '沒有歌詞，用 AI 辨識' }))
     expect(screen.getByText(/只是草稿/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '開始處理' }))
 

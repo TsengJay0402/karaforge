@@ -48,7 +48,7 @@ export function toErrorBody(cause: unknown): ApiErrorBody {
 function fallbackBody(status: number, text: string): ApiErrorBody {
   return {
     code: 'http_error',
-    message_zh: `伺服器回應錯誤(${status})`,
+    message_zh: `伺服器回應錯誤（${status}）`,
     message_en: `The server answered with an error (${status})`,
     hint_zh: null,
     hint_en: null,
