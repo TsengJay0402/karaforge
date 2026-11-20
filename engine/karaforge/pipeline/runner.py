@@ -17,6 +17,8 @@ from karaforge.pipeline.stage import JsonDict, Stage, StageContext
 from karaforge.runtime import subprogress
 
 RESULT_FILE = "result.json"
+ELAPSED_KEY = "_elapsed_s"
+"""Key the runner adds to every stage result: seconds the stage took when it actually ran."""
 StageStatus = Literal["started", "cached", "finished", "skipped"]
 _T = TypeVar("_T")
 
@@ -273,6 +275,8 @@ class PipelineRunner:
         try:
             result = self._guarded(stage, lambda: stage.run(ctx, partial))
             ctx.cancel.raise_if_cancelled()
+            # Remember how long the work took: a later cache hit can still report it.
+            result = {**result, ELAPSED_KEY: round(time.monotonic() - started, 3)}
             (partial / RESULT_FILE).write_text(
                 json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8"
             )

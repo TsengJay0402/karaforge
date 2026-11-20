@@ -114,6 +114,35 @@
           },
           "title": "Tokens",
           "type": "array"
+        },
+        "time_hint": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Hint"
         }
       },
       "required": [
@@ -388,7 +417,8 @@
           "default": "auto",
           "enum": [
             "auto",
-            "manual"
+            "manual",
+            "import"
           ],
           "title": "Source",
           "type": "string"
@@ -405,7 +435,7 @@
   "description": "The document stored in ``project.json``.",
   "properties": {
     "schema_version": {
-      "default": 1,
+      "default": 2,
       "title": "Schema Version",
       "type": "integer"
     },
@@ -445,8 +475,8 @@
       "$ref": "#/$defs/Render"
     }
   },
-  "title": "KaraForge project.json (schema version 1)",
+  "title": "KaraForge project.json (schema version 2)",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://karaforge.dev/schema/project-v1.json"
+  "$id": "https://karaforge.dev/schema/project-v2.json"
 }

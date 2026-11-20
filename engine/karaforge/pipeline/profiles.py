@@ -60,7 +60,9 @@ class AsrSettings(_Settings):
 class AlignSettings(_Settings):
     """The three-pass alignment algorithm."""
 
-    aligner: str = "whisper-attn"
+    aligner: str = "ctc"
+    """``ctc``, ``whisper-attn``, ``qwen``, ``hybrid`` or ``auto`` (``hybrid`` when the
+    optional Qwen package is installed, otherwise ``ctc``); see docs/alignment.md."""
     model: str = "default"
     """Registry id of the aligner's model; ``default`` picks the adapter's usual one."""
     coarse: Literal["asr", "regions", "global"] = "asr"
@@ -73,9 +75,24 @@ class AlignSettings(_Settings):
     """
     window_pad_ms: int = Field(default=1000, ge=0)
     """Audio kept on each side of a line's window for the fine pass."""
+    context_tokens: int = Field(default=4, ge=0, le=16)
+    """How many tokens of the neighbouring lines are given to the aligner as context when
+    their sound may be inside a line's padded window (0 = none)."""
+    lead_ms: int | None = Field(default=None, ge=-500, le=500)
+    """Constant subtracted from every start the aligner reports, before refinement.
+
+    Aligners have a characteristic bias (CTC models fire a little after a syllable begins).
+    ``None`` uses the value calibrated for the selected aligner (its ``lead_ms`` attribute,
+    determined on development data, never on test data); a number overrides it.
+    """
     onset_snap: bool = True
     onset_snap_ms: int = Field(default=60, ge=0)
     """Maximum distance a token start may move to reach an onset."""
+    weak_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    """Aligner score below which a token counts as placed without evidence; such a token is
+    moved to the strongest unclaimed onset between its neighbours.  ``None`` uses the
+    aligner's own threshold (its ``weak_score`` attribute, chosen on development data);
+    0 disables the rule."""
     min_token_ms: int = Field(default=60, ge=1)
     pause_threshold_ms: int = Field(default=300, ge=0)
     """A gap longer than this ends the previous token at the vocal energy drop."""
@@ -135,14 +152,19 @@ def _unknown_setting(key: str) -> PipelineError:
 
 def _builtin() -> dict[str, Profile]:
     return {
+        # Smallest download and fastest: the aligner reuses the recogniser's Whisper model.
         "cpu-lite": Profile(
             name="cpu-lite",
             asr=AsrSettings(model="whisper-base", beam_size=2),
+            align=AlignSettings(aligner="whisper-attn"),
         ),
+        # The default: CTC alignment, permissively licensed models only, no optional package.
         "balanced": Profile(name="balanced"),
+        # Best recogniser, and the hybrid CTC + Qwen aligner when its package is installed.
         "gpu-quality": Profile(
             name="gpu-quality",
             asr=AsrSettings(model="whisper-large-v3-turbo"),
+            align=AlignSettings(aligner="auto"),
         ),
     }
 

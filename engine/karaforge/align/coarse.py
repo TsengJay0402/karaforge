@@ -14,7 +14,8 @@ hallucination — but right often enough to say roughly *when* each line is sung
    anchored neighbours, following voice-activity regions in proportion to their token counts.
 
 Locked tokens (corrected by the user) are exact anchors: their line is placed from them and
-any transcript match that contradicts them is dropped.
+any transcript match that contradicts them is dropped.  A line that came with a time from an
+imported file (LRC, SRT, ASS) uses that time as its window and is not searched for at all.
 
 The point of this pass is to stop errors from accumulating: every line gets its own window,
 so a problem in one line cannot shift the lines after it.
@@ -33,12 +34,23 @@ from karaforge.adapters.base import AsrWord
 from karaforge.text.romanize import romanize_tokens
 from karaforge.text.tokenize import TokenKind, tokenize
 
-WindowSource = Literal["asr", "anchor", "regions", "interpolated"]
+WindowSource = Literal["asr", "anchor", "hint", "regions", "interpolated"]
 
 _DEFAULT_TOKEN_S = 0.4
 _MIN_TOKEN_S = 0.1
 _MAX_TOKEN_S = 1.5
 _MIN_REGION_PIECE_S = 0.25
+_COLLAPSED_WORD_S = 0.02
+_COLLAPSED_SPAN_S = 0.05
+_COLLAPSED_RUN = 3
+_PHRASE_GAP_S = 0.3
+_BRIDGED_PAUSE_S = 0.5
+"""A word that begins this long before a voice-activity region and ends inside it."""
+_MAX_WORD_S = 0.6
+"""Longest plausible duration per token of a phrase-initial recognised word."""
+_HINT_QUALITY = 0.8
+_HINT_SLACK_S = 2.0
+_SOURCE_RANK: dict[str, int] = {"anchor": 2, "hint": 1}
 
 
 @dataclass(frozen=True)
@@ -52,6 +64,8 @@ class LyricLine:
     """Romanised reading per token; empty when the token has nothing pronounceable."""
     locked: tuple[tuple[float, float] | None, ...]
     """``(start_s, end_s)`` for tokens locked by the user, ``None`` for the others."""
+    hint: tuple[float, float | None] | None = None
+    """``(start_s, end_s)`` of the line from an imported file with line-level timing."""
 
     @property
     def size(self) -> int:
@@ -100,27 +114,96 @@ def _letter_sequence(lines: Sequence[LyricLine]) -> tuple[str, list[tuple[int, i
     return "".join(letters), owners
 
 
-def move_words_out_of_silence(
+def _token_count(text: str) -> int:
+    return max(1, sum(1 for token in tokenize(text) if token.core))
+
+
+def drop_collapsed_words(words: Sequence[AsrWord]) -> list[AsrWord]:
+    """Remove runs of recognised words that all sit on one instant.
+
+    When a recogniser invents text (typically a copy of the lyrics it was primed with), its
+    word timing has nothing to hold on to and several words in a row come out with no
+    duration at the same timestamp.  Three or more such words are physically impossible and
+    are discarded; they would otherwise anchor a lyric line to a place where it is not sung.
+    """
+    kept: list[AsrWord] = []
+    index = 0
+    while index < len(words):
+        stop = index
+        while (
+            stop < len(words)
+            and words[stop].end_s - words[stop].start_s <= _COLLAPSED_WORD_S
+            and words[stop].start_s - words[index].start_s <= _COLLAPSED_SPAN_S
+        ):
+            stop += 1
+        if stop - index >= _COLLAPSED_RUN:
+            index = stop
+            continue
+        kept.append(words[index])
+        index += 1
+    return kept
+
+
+def clean_words(
     words: Sequence[AsrWord], regions: Sequence[tuple[float, float]], reach_s: float = 4.0
 ) -> list[AsrWord]:
-    """Correct recognised words whose timestamp falls where nobody is singing.
+    """Repair the typical defects of recognised word times before they are used as anchors.
 
-    Recognisers tend to stretch the first word after a pause back into the pause.  A word
-    that starts outside every voice-activity region is moved to the start of the next region
-    (if one begins within ``reach_s``); its duration is kept.
+    1. Collapsed runs are dropped (:func:`drop_collapsed_words`).
+    2. A word that *spans a pause* — it starts in at least half a second of silence and a
+       voice-activity region begins before it ends — was dragged back across that pause; it
+       starts where the region starts.
+    3. The first word after a gap in the transcript is where recognisers are least reliable:
+
+       * If it starts where nobody is singing and no other word lies between it and the next
+         voice-activity region, it is moved to the start of that region.
+       * Otherwise, if it is implausibly long, only its *end* is trusted and the start is
+         pulled up to a normal word length before the end.
+
+       Other words are left alone even when the voice-activity detector says "silence"
+       there — a run of consistently timed words is better evidence than the detector,
+       which misses quiet singing in a noisy mix.
+    4. A word without duration takes the start of the word after it.
     """
-    if not regions:
-        return list(words)
+    kept = drop_collapsed_words(words)
     starts = [region[0] for region in regions]
     result: list[AsrWord] = []
-    for word in words:
-        inside = any(start - 0.05 <= word.start_s <= end for start, end in regions)
-        if not inside:
-            following = next((start for start in starts if start >= word.start_s), None)
-            if following is not None and following - word.start_s <= reach_s:
-                shift = following - word.start_s
-                word = AsrWord(word.text, following, word.end_s + shift, word.probability)
-        result.append(word)
+    previous_end: float | None = None
+    for index, word in enumerate(kept):
+        following = kept[index + 1].start_s if index + 1 < len(kept) else None
+        phrase_initial = previous_end is None or word.start_s - previous_end >= _PHRASE_GAP_S
+        if word.end_s - word.start_s > _COLLAPSED_WORD_S:
+            previous_end = word.end_s
+        start, end = word.start_s, word.end_s
+        bridged = [
+            low
+            for low in starts
+            if start + _BRIDGED_PAUSE_S <= low <= end
+            and not any(a < low and b > start for a, b in regions if a != low)
+        ]
+        if bridged:
+            start = bridged[-1]
+            end = max(end, start + 0.05)
+        elif phrase_initial:
+            limit = _MAX_WORD_S * _token_count(word.text)
+            in_voice = any(low - 0.05 <= start <= high for low, high in regions)
+            region = next((low for low in starts if low >= start), None)
+            if (
+                not in_voice
+                and region is not None
+                and region - start <= reach_s
+                and (following is None or following >= region - 0.05)
+            ):
+                length = min(max(end - start, 0.05), limit)
+                start, end = region, region + length
+            elif end - start > limit:
+                start = end - limit
+        result.append(AsrWord(word.text, start, max(end, start), word.probability))
+    # Words without duration lean on the word after them.
+    for index in range(len(result) - 2, -1, -1):
+        word, later = result[index], result[index + 1]
+        if word.end_s - word.start_s <= _COLLAPSED_WORD_S and later.start_s > word.start_s:
+            result[index] = AsrWord(word.text, later.start_s, later.start_s, word.probability)
     return result
 
 
@@ -277,9 +360,21 @@ def coarse_align(
             end = last_lock[1]
         windows[index] = LineWindow(start, max(end, start), 1.0, "anchor")
 
+    # ---- line times of an imported file
+    for index, line in enumerate(lines):
+        if windows[index] is not None or line.hint is None:
+            continue
+        start, end = line.hint
+        if end is None:
+            end = start + max(_HINT_SLACK_S, line.size * _DEFAULT_TOKEN_S * 1.5)
+        # A file's line often "lasts" until the next line starts, interlude included; the
+        # line itself cannot be longer than its tokens sung very slowly.
+        end = min(end, start + line.size * _MAX_TOKEN_S + _HINT_SLACK_S)
+        windows[index] = LineWindow(start, max(end, start), _HINT_QUALITY, "hint")
+
     # ---- transcript matching
     lyric_letters, owners = _letter_sequence(lines)
-    asr_letters, asr_times = transcript_letters(move_words_out_of_silence(words, regions))
+    asr_letters, asr_times = transcript_letters(clean_words(words, regions))
     matched_equal = [[0] * line.size for line in lines]
     if lyric_letters and asr_letters:
         for op in Levenshtein.opcodes(lyric_letters, asr_letters):
@@ -357,7 +452,11 @@ def coarse_align(
 
 
 def _drop_out_of_order(windows: list[LineWindow | None], lines: Sequence[LyricLine]) -> None:
-    """Remove transcript anchors that contradict the order of the lines or a locked anchor."""
+    """Remove windows that contradict the order of the lines.
+
+    Locked anchors win over imported line times, which win over transcript matches; between
+    two transcript matches the better-matched line stays.
+    """
     changed = True
     while changed:
         changed = False
@@ -369,12 +468,14 @@ def _drop_out_of_order(windows: list[LineWindow | None], lines: Sequence[LyricLi
                 previous = windows[previous_index]
                 assert previous is not None
                 if window.start_s < previous.start_s - 0.05:
-                    # Keep locked anchors; otherwise keep the better-matched line.
-                    if window.source == "anchor" and previous.source != "anchor":
+                    rank = _SOURCE_RANK.get(window.source, 0)
+                    previous_rank = _SOURCE_RANK.get(previous.source, 0)
+                    if rank > previous_rank:
                         loser = previous_index
-                    elif previous.source == "anchor" and window.source != "anchor":
+                    elif previous_rank > rank:
                         loser = index
-                    elif window.source == "anchor":
+                    elif rank > 0:
+                        # Two user-given times that disagree: keep both as they are.
                         previous_index = index
                         continue
                     else:

@@ -16,6 +16,7 @@ def pyin(
     sr: float = 22050,
     frame_length: int = 2048,
     hop_length: int | None = None,
+    resolution: float = 0.1,
     fill_na: float | None = ...,
     center: bool = True,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.bool_], npt.NDArray[np.float64]]: ...

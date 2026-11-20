@@ -13,7 +13,9 @@ from karaforge.pipeline.profiles import AlignSettings, AsrSettings, Profile, Sep
 
 SEPARATORS = ("audio-separator",)
 TRANSCRIBERS = ("faster-whisper",)
-ALIGNERS = ("whisper-attn",)
+ALIGNERS = ("whisper-attn", "ctc", "ctc-mms", "qwen", "hybrid", "auto")
+"""``auto`` means ``hybrid`` when the optional Qwen package is installed, else ``ctc``;
+``ctc-mms`` is the CTC aligner with the single multilingual MMS model (CC-BY-NC)."""
 
 
 def _unknown(kind_zh: str, kind_en: str, name: str, options: tuple[str, ...]) -> PipelineError:
@@ -43,21 +45,52 @@ def create_transcriber(settings: AsrSettings, device: DeviceChoice) -> Transcrib
     raise _unknown("語音辨識器", "speech recogniser", settings.adapter, TRANSCRIBERS)
 
 
+def qwen_available() -> bool:
+    """Whether the optional ``qwen-asr`` package can be imported."""
+    import importlib.util
+
+    return importlib.util.find_spec("qwen_asr") is not None
+
+
+def resolve_aligner(name: str) -> str:
+    """Turn ``auto`` into a concrete aligner name."""
+    if name != "auto":
+        return name
+    return "hybrid" if qwen_available() else "ctc"
+
+
 def aligner_model(settings: AlignSettings, asr: AsrSettings) -> str:
     """Resolve ``align.model = "default"`` to a concrete registry id."""
     if settings.model != "default":
         return settings.model
-    if settings.aligner == "whisper-attn":
+    if resolve_aligner(settings.aligner) == "whisper-attn":
         return asr.model
-    return settings.model
+    return "default"
 
 
 def create_aligner(settings: AlignSettings, asr: AsrSettings, device: DeviceChoice) -> Aligner:
     """Instantiate the forced aligner selected by ``settings``."""
-    if settings.aligner == "whisper-attn":
+    name = resolve_aligner(settings.aligner)
+    if name == "whisper-attn":
         from karaforge.adapters.aligners.whisper_attention import WhisperAttentionAligner
 
         return WhisperAttentionAligner(aligner_model(settings, asr), device)
+    if name == "ctc":
+        from karaforge.adapters.aligners.ctc import CtcAligner
+
+        return CtcAligner(aligner_model(settings, asr), device)
+    if name == "ctc-mms":
+        from karaforge.adapters.aligners.ctc import CtcAligner
+
+        return CtcAligner("mms-fa", device)
+    if name == "qwen":
+        from karaforge.adapters.aligners.qwen import QwenAligner
+
+        return QwenAligner(aligner_model(settings, asr), device)
+    if name == "hybrid":
+        from karaforge.adapters.aligners.hybrid import HybridAligner
+
+        return HybridAligner(device)
     raise _unknown("對齊器", "aligner", settings.aligner, ALIGNERS)
 
 

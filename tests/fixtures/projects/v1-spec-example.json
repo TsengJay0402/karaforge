@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "revision": 42,
+  "meta": {
+    "title": "", "artist": "", "lyricist": "", "composer": "",
+    "language": "zh-TW", "duration_ms": 0
+  },
+  "media": {
+    "source": "media/source.mp4", "audio": "media/audio.wav",
+    "vocals": "media/vocals.wav", "instrumental": "media/instrumental.wav",
+    "has_video": true
+  },
+  "analysis": { "tempo_bpm": 92.0, "beats_ms": [], "vocal_regions": [[1200, 15800]] },
+  "singers": [
+    { "id": "m", "label": "男", "theme_slot": "male" },
+    { "id": "f", "label": "女", "theme_slot": "female" },
+    { "id": "all", "label": "合", "theme_slot": "duet" }
+  ],
+  "lines": [
+    {
+      "id": "L001",
+      "singer": "m",
+      "paragraph": 0,
+      "tokens": [
+        {
+          "text": "我", "start_ms": 15230, "end_ms": 15610,
+          "ruby": "ㄨㄛˇ", "ruby_source": "auto",
+          "confidence": 0.93, "locked": false, "source": "auto"
+        }
+      ]
+    }
+  ],
+  "style": { "theme": "classic-ktv", "overrides": {} },
+  "render": { "resolution": [1920, 1080], "fps": 30, "background": { "type": "video" } }
+}

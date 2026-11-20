@@ -96,3 +96,14 @@ def test_parse_overrides_empty_value_becomes_empty_string() -> None:
 
 def test_parse_overrides_typical_override() -> None:
     assert parse_overrides(["align.onset_snap_ms=80"]) == {"align.onset_snap_ms": 80}
+
+
+def test_profiles_choose_their_aligner() -> None:
+    assert get_profile("cpu-lite").align.aligner == "whisper-attn"
+    assert get_profile("balanced").align.aligner == "ctc"
+    assert get_profile("gpu-quality").align.aligner == "auto"
+    # Bias correction and the weak-evidence threshold come from the aligner unless set.
+    assert get_profile("balanced").align.lead_ms is None
+    assert get_profile("balanced").align.weak_score is None
+    tuned = get_profile("balanced").with_overrides({"align.weak_score": 0, "align.lead_ms": 20})
+    assert (tuned.align.weak_score, tuned.align.lead_ms) == (0.0, 20)

@@ -20,7 +20,7 @@ from karaforge.runtime import CancelToken, ProgressFn, null_progress, subprogres
 from karaforge.text.romanize import romanize_tokens
 from karaforge.text.tokenize import TokenKind, tokenize
 
-ALIGN_ALGORITHM_VERSION = "5"
+ALIGN_ALGORITHM_VERSION = "7"
 """Bump when the algorithm changes in a way that alters results for the same inputs."""
 
 
@@ -61,6 +61,10 @@ def lyric_lines(project: Project) -> list[LyricLine]:
             else None
             for token in line.tokens
         )
+        hint: tuple[float, float | None] | None = None
+        if line.time_hint is not None:
+            hint_start, hint_end = line.time_hint
+            hint = (hint_start / 1000.0, None if hint_end is None else hint_end / 1000.0)
         result.append(
             LyricLine(
                 id=line.id,
@@ -68,6 +72,7 @@ def lyric_lines(project: Project) -> list[LyricLine]:
                 kinds=tuple(kinds),
                 readings=tuple(readings),
                 locked=locked,
+                hint=hint,
             )
         )
     return result
@@ -141,7 +146,15 @@ def run_alignment(
             cancel=token,
             max_window_s=max_window_s,
             features=features,
+            context_tokens=settings.context_tokens,
         )
+    lead_ms = settings.lead_ms if settings.lead_ms is not None else getattr(aligner, "lead_ms", 0)
+    if lead_ms:
+        lead = lead_ms / 1000.0
+        for line_timings in fine:
+            for timing in line_timings:
+                if not timing.locked and not timing.estimated:
+                    timing.start_s = max(0.0, timing.start_s - lead)
     seconds["fine"] = time.monotonic() - started
 
     started = time.monotonic()
@@ -151,6 +164,11 @@ def run_alignment(
         RefineSettings(
             onset_snap=settings.onset_snap,
             onset_snap_ms=settings.onset_snap_ms,
+            weak_score=(
+                settings.weak_score
+                if settings.weak_score is not None
+                else float(getattr(aligner, "weak_score", 0.0))
+            ),
             min_token_ms=settings.min_token_ms,
             pause_threshold_ms=settings.pause_threshold_ms,
             long_note=settings.long_note,

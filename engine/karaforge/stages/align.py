@@ -28,8 +28,9 @@ ALIGNMENT_FILE = "alignment.json"
 def alignment_fingerprint(project: Project, only_lines: list[str] | None) -> dict[str, Any]:
     """The parts of the project that determine the alignment result.
 
-    Text of every token, readings given by the user and the times of locked tokens.  Times
-    of unlocked tokens are deliberately excluded: they are this stage's *output*.
+    Text of every token, readings given by the user, the times of locked tokens and line
+    times that came from an imported file.  Times of unlocked tokens are deliberately
+    excluded: they are this stage's *output*.
     """
     return {
         "language": project.meta.language,
@@ -37,6 +38,7 @@ def alignment_fingerprint(project: Project, only_lines: list[str] | None) -> dic
         "lines": [
             {
                 "id": line.id,
+                "hint": list(line.time_hint) if line.time_hint is not None else None,
                 "tokens": [
                     [
                         token.text,
@@ -194,7 +196,7 @@ class AlignStage(Stage):
             "low_confidence_tokens": sum(1 for value in flat if value < 0.5),
             "windows_from": {
                 source: sum(1 for window in output.windows if window.source == source)
-                for source in ("asr", "anchor", "regions", "interpolated")
+                for source in ("asr", "anchor", "hint", "regions", "interpolated")
             },
             "seconds": {key: round(value, 3) for key, value in output.seconds.items()},
         }

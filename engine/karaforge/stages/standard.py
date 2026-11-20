@@ -15,6 +15,7 @@ from karaforge.stages.analyze import AnalyzeStage
 from karaforge.stages.asr import AsrStage
 from karaforge.stages.export import ExportStage
 from karaforge.stages.ingest import IngestStage
+from karaforge.stages.pitch import PitchStage
 from karaforge.stages.separate import SeparateStage
 from karaforge.stages.subtitles import SubtitlesStage
 
@@ -27,6 +28,7 @@ def all_stages() -> list[Stage]:
     return [
         IngestStage(),
         SeparateStage(),
+        PitchStage(),
         AnalyzeStage(),
         AsrStage(),
         AlignStage(),

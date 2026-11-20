@@ -32,7 +32,10 @@ Frame = npt.NDArray[np.uint8]
 
 
 def lyric_line(
-    line_id: str, text: str, locked: dict[int, tuple[float, float]] | None = None
+    line_id: str,
+    text: str,
+    locked: dict[int, tuple[float, float]] | None = None,
+    hint: tuple[float, float | None] | None = None,
 ) -> LyricLine:
     """Build a :class:`LyricLine` from plain text; ``locked`` maps token index to times."""
     tokens = tokenize(text)
@@ -46,6 +49,7 @@ def lyric_line(
         kinds=tuple(kinds),
         readings=tuple(readings),
         locked=tuple(locks.get(index) for index in range(len(tokens))),
+        hint=hint,
     )
 
 
@@ -100,7 +104,7 @@ class FakeAligner:
         """Self-description of the test double."""
         return AdapterInfo(
             name="fake-uniform",
-            version="test",
+            version=f"test-{id(self):x}",
             license="n/a",
             languages=("*",),
             devices=("cpu",),

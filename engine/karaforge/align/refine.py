@@ -9,6 +9,12 @@ Steps, in order (locked tokens are never touched):
 1. **Onset snapping.**  A token's start moves to the nearest detected vocal onset within
    ``onset_snap_ms``.  Aligners place boundaries on a coarse grid (20–80 ms) and with a
    systematic lag; the onset detector sees the actual rise of the sound.
+
+   **Tokens without evidence.**  Sometimes the aligner's acoustic model does not hear a
+   token at all (a syllable swallowed between two others, a held vowel) and merely squeezes
+   it in next to a neighbour.  Such a token (score below ``weak_score``) is moved to the
+   strongest onset between its neighbours that no other token has taken: the onset detector
+   noticed that something started there even though the recogniser could not say what.
 2. **Ordering.**  Starts are made strictly increasing with at least ``min_token_ms`` between
    them, within a line and across lines.
 3. **End times.**  A token ends where the next one starts.  If the voice falls silent for
@@ -32,6 +38,8 @@ _LEADING_REACH_S = 3.0
 """How far ahead the first tokens of a line look for the voice to come in."""
 _INNER_REACH_S = 1.0
 """The same for tokens inside a line (a breath between phrases)."""
+_WEAK_REACH_S = 1.0
+"""How far the first or last token of a line may move to reach an unclaimed onset."""
 
 
 @dataclass(frozen=True)
@@ -40,6 +48,8 @@ class RefineSettings:
 
     onset_snap: bool = True
     onset_snap_ms: int = 60
+    weak_score: float = 0.0
+    """Aligner score below which a token counts as placed without evidence (0 = never)."""
     min_token_ms: int = 60
     pause_threshold_ms: int = 300
     long_note: bool = True
@@ -58,6 +68,8 @@ class RefinedToken:
     raw_start_s: float
     """Start time before refinement (the aligner's answer)."""
     snapped: bool = False
+    rescued: bool = False
+    """The aligner had no evidence for the token; it was placed on an unclaimed onset."""
     left_silence: bool = False
     """The start was moved out of a silent stretch."""
     onset_distance_s: float | None = None
@@ -120,6 +132,57 @@ def _snap_starts(tokens: list[RefinedToken], features: VocalFeatures, limit_s: f
             token.start_s = best
             token.snapped = True
         used_until = max(used_until, token.start_s)
+
+
+def _place_weak_tokens(
+    lines: list[list[RefinedToken]],
+    features: VocalFeatures,
+    weak_score: float,
+    min_gap_s: float,
+) -> None:
+    """Move tokens the aligner had no evidence for onto unclaimed onsets.
+
+    A weak token inside a line may go anywhere between its neighbours' starts.  The first
+    token of a line may look back up to :data:`_WEAK_REACH_S` (not into the previous line),
+    the last one forward by the same amount (not into the next line).  Among the onsets in
+    that span that are not already the start of another token, the strongest wins; without
+    such an onset the token stays where the aligner put it.
+    """
+    onsets, peaks = features.onsets_s, features.onset_peaks
+    if onsets.size == 0 or weak_score <= 0.0:
+        return
+    taken = {round(token.start_s, 3) for line in lines for token in line if token.snapped}
+    for line_index, line in enumerate(lines):
+        previous_line_end = max(
+            (token.start_s for earlier in lines[:line_index] for token in earlier[-1:]),
+            default=0.0,
+        )
+        next_line_start = next(
+            (later[0].start_s for later in lines[line_index + 1 :] if later), float("inf")
+        )
+        for index, token in enumerate(line):
+            if token.locked or token.estimated or token.snapped or token.score >= weak_score:
+                continue
+            if index > 0:
+                low = line[index - 1].start_s + min_gap_s
+            else:
+                low = max(previous_line_end + min_gap_s, token.start_s - _WEAK_REACH_S)
+            if index + 1 < len(line):
+                high = line[index + 1].start_s - min_gap_s
+            else:
+                high = min(next_line_start - min_gap_s, token.start_s + _WEAK_REACH_S)
+            first = int(np.searchsorted(onsets, low, side="left"))
+            last = int(np.searchsorted(onsets, high, side="right"))
+            best: int | None = None
+            for candidate in range(first, last):
+                if round(float(onsets[candidate]), 3) in taken:
+                    continue
+                if best is None or peaks[candidate] > peaks[best]:
+                    best = candidate
+            if best is not None:
+                token.start_s = float(onsets[best])
+                token.rescued = True
+                taken.add(round(token.start_s, 3))
 
 
 def _enforce_order(tokens: list[RefinedToken], min_gap_s: float, duration_s: float) -> None:
@@ -218,6 +281,7 @@ def refine(
     _leave_silence(refined, features, duration_s)
     if settings.onset_snap:
         _snap_starts(flat, features, settings.onset_snap_ms / 1000.0)
+        _place_weak_tokens(refined, features, settings.weak_score, min_gap)
     _enforce_order(flat, min_gap, duration_s)
 
     pause = settings.pause_threshold_ms / 1000.0

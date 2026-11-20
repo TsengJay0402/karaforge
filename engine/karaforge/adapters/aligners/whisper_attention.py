@@ -38,13 +38,19 @@ class WhisperAttentionAligner:
         device: Resolved compute device.
     """
 
+    max_window_s: float | None = 29.0
+    """Whisper looks at 30 seconds of audio at a time."""
+    lead_ms: int = -110
+    """The attention-based times come out early; they are shifted *later* by this much
+    (median over the benchmark's development songs, never the test songs)."""
+
     def __init__(self, model_id: str, device: DeviceChoice) -> None:
         spec = get_model(model_id)
         self._model_id = model_id
         self._device = device
         self._info = AdapterInfo(
             name="whisper-attn",
-            version=f"1+{model_id}",
+            version=f"2+{model_id}",
             license=spec.license,
             languages=("*",),
             devices=("cpu", "cuda"),

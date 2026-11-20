@@ -4,21 +4,65 @@ Each line is aligned on its own, in its coarse window padded by about a second o
 Locked tokens split a line into independent runs: a run between two locked tokens is aligned
 only within the time between them, so a user's correction acts as a hard constraint for
 everything around it.
+
+Answers are remembered per request (same aligner, same stretch of the same audio, same
+tokens).  When the user locks a few tokens and re-aligns, only the runs whose boundaries
+changed go to the model again; everything else is answered from memory.
 """
 
 from __future__ import annotations
 
+import hashlib
+import threading
+from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from karaforge.adapters.base import Aligner, AlignRequest, AlignUnit
+from karaforge.adapters.base import Aligner, AlignRequest, AlignUnit, UnitTiming
 from karaforge.align.coarse import LineWindow, LyricLine
 from karaforge.align.features import VocalFeatures
 from karaforge.audio.io import MODEL_RATE, FloatArray
 from karaforge.runtime import CancelToken, ProgressFn
 
 _MIN_RUN_S_PER_TOKEN = 0.03
-_CONTEXT_TOKENS = 4
+_MEMO_SIZE = 4096
+_memo: OrderedDict[tuple[object, ...], list[UnitTiming]] = OrderedDict()
+_memo_lock = threading.Lock()
+
+
+def clear_memo() -> None:
+    """Forget all remembered aligner answers."""
+    with _memo_lock:
+        _memo.clear()
+
+
+def _ask(aligner: Aligner, request: AlignRequest, audio_key: str) -> list[UnitTiming]:
+    """``aligner.align(request)``, answered from memory when the same question was asked."""
+    info = aligner.info
+    key: tuple[object, ...] = (
+        info.tag,
+        info.models,
+        audio_key,
+        request.offset_s,
+        request.audio.size,
+        request.language,
+        request.open_start,
+        request.open_end,
+        tuple((unit.text, unit.reading) for unit in request.units),
+        tuple((unit.text, unit.reading) for unit in request.prefix_units),
+        tuple((unit.text, unit.reading) for unit in request.suffix_units),
+    )
+    with _memo_lock:
+        known = _memo.get(key)
+        if known is not None:
+            _memo.move_to_end(key)
+            return list(known)
+    answer = aligner.align(request)
+    with _memo_lock:
+        _memo[key] = list(answer)
+        while len(_memo) > _MEMO_SIZE:
+            _memo.popitem(last=False)
+    return answer
 
 
 @dataclass
@@ -54,9 +98,11 @@ def _lock_bounds(lines: Sequence[LyricLine]) -> tuple[list[float | None], list[f
     return before, after
 
 
-def _units(line: LyricLine, *, from_end: bool, count: int = _CONTEXT_TOKENS) -> list[AlignUnit]:
+def _units(line: LyricLine, *, from_end: bool, count: int) -> list[AlignUnit]:
     """A few pronounceable tokens from the end (or the start) of a line, as context."""
     indices = [index for index in range(line.size) if line.cores[index]]
+    if count <= 0:
+        return []
     chosen = indices[-count:] if from_end else indices[:count]
     return [
         AlignUnit(text=line.cores[i], kind=line.kinds[i], reading=line.readings[i] or None)
@@ -92,6 +138,7 @@ def _align_run(
     open_end: bool,
     prefix: Sequence[AlignUnit] = (),
     suffix: Sequence[AlignUnit] = (),
+    audio_key: str = "",
 ) -> list[TokenTiming]:
     """Align the tokens ``indices`` of ``line`` inside ``[start_s, end_s]``."""
     voiced = [index for index in indices if line.cores[index]]
@@ -109,17 +156,17 @@ def _align_run(
         )
         for index in voiced
     ]
-    timings = aligner.align(
-        AlignRequest(
-            audio=audio[first_sample:last_sample],
-            units=units,
-            language=language,
-            open_start=open_start,
-            open_end=open_end,
-            prefix_units=prefix,
-            suffix_units=suffix,
-        )
+    request = AlignRequest(
+        audio=audio[first_sample:last_sample],
+        units=units,
+        language=language,
+        open_start=open_start,
+        open_end=open_end,
+        prefix_units=prefix,
+        suffix_units=suffix,
+        offset_s=first_sample / MODEL_RATE,
     )
+    timings = _ask(aligner, request, audio_key) if audio_key else aligner.align(request)
     offset = first_sample / MODEL_RATE
     by_index = {
         index: TokenTiming(
@@ -153,6 +200,7 @@ def fine_align(
     cancel: CancelToken,
     max_window_s: float | None = None,
     features: VocalFeatures | None = None,
+    context_tokens: int = 4,
 ) -> list[list[TokenTiming]]:
     """Run the aligner on every line.
 
@@ -167,6 +215,7 @@ def fine_align(
         cancel: Cancellation token.
         max_window_s: Longest window the aligner accepts, if it has a limit.
         features: Vocal features; used to notice that a window starts or ends mid-singing.
+        context_tokens: Tokens of the neighbouring lines passed to the aligner as context.
 
     Returns:
         For each line, one :class:`TokenTiming` per token.
@@ -174,6 +223,10 @@ def fine_align(
     duration = audio.size / MODEL_RATE
     before, after = _lock_bounds(lines)
     results: list[list[TokenTiming]] = []
+    prepare = getattr(aligner, "prepare", None)
+    if callable(prepare):
+        prepare(audio)
+    audio_key = hashlib.blake2b(audio.tobytes(), digest_size=16).hexdigest()
 
     for line_index, (line, window) in enumerate(zip(lines, windows, strict=True)):
         cancel.raise_if_cancelled()
@@ -190,16 +243,22 @@ def fine_align(
             low = max(low, centre - max_window_s / 2.0)
             high = min(high, low + max_window_s)
 
-        # Context for aligners that cannot ignore foreign sound on their own: the tail of
-        # the previous line / head of the next one, when their windows reach into this one.
+        # Is there sound in the padded window that belongs to a neighbouring line?  That is
+        # the case when the neighbour's own window reaches into this one, or when somebody
+        # is singing right at the window's edge.  Aligners are told (``open_start`` /
+        # ``open_end``) and given the neighbour's nearest tokens as context.
+        foreign_before = line_index > 0 and (
+            windows[line_index - 1].end_s > low or _voiced(features, low)
+        )
+        foreign_after = line_index + 1 < len(lines) and (
+            windows[line_index + 1].start_s < high or _voiced(features, high)
+        )
         prefix: list[AlignUnit] = []
         suffix: list[AlignUnit] = []
-        if line_index > 0 and (windows[line_index - 1].end_s > low or _voiced(features, low)):
-            prefix = _units(lines[line_index - 1], from_end=True)
-        if line_index + 1 < len(lines) and (
-            windows[line_index + 1].start_s < high or _voiced(features, high)
-        ):
-            suffix = _units(lines[line_index + 1], from_end=False)
+        if foreign_before:
+            prefix = _units(lines[line_index - 1], from_end=True, count=context_tokens)
+        if foreign_after:
+            suffix = _units(lines[line_index + 1], from_end=False, count=context_tokens)
 
         timings: list[TokenTiming | None] = [None] * line.size
         for index in line.locked_indices:
@@ -230,10 +289,11 @@ def fine_align(
                 audio,
                 aligner,
                 language,
-                open_start=left is None,
-                open_end=right is None,
+                open_start=left is None and foreign_before,
+                open_end=right is None and foreign_after,
                 prefix=prefix if left is None else (),
                 suffix=suffix if right is None else (),
+                audio_key=audio_key,
             )
             timings[index:run_end] = aligned
             index = run_end

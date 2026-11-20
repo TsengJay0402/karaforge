@@ -9,7 +9,8 @@ from karaforge.io.exporters.video import (
     VIDEO_EXPORT_VERSION,
     VideoOptions,
     effective_background,
-    export_mp4,
+    export_video,
+    second_track,
 )
 from karaforge.layout.fonts import default_library
 from karaforge.pipeline.stage import (
@@ -34,7 +35,7 @@ def video_options(ctx: StageContext) -> VideoOptions:
 
 
 class ExportStage(Stage):
-    """Burn the subtitles into an MP4."""
+    """Render the video: MP4 with burned-in subtitles, or MKV with a subtitle track."""
 
     name: ClassVar[str] = "export"
     version: ClassVar[str] = VIDEO_EXPORT_VERSION
@@ -53,11 +54,12 @@ class ExportStage(Stage):
         files: dict[str, Path] = {"ass": subtitles / ASS_FILE}
         background = effective_background(project, ctx.paths, options)
         source = ctx.paths.resolve(project.media.source)
-        if source is not None and (background == "video" or options.audio == "original"):
+        tracks = {options.audio, second_track(project, ctx.paths, options)}
+        if source is not None and (background == "video" or "original" in tracks):
             files["source"] = source
-        if options.audio != "original":
+        if tracks & {"instrumental", "guide"}:
             files["instrumental"] = ctx.paths.media / "instrumental.wav"
-        if options.audio == "guide":
+        if "guide" in tracks:
             files["vocals"] = ctx.paths.media / "vocals.wav"
         image = ctx.paths.resolve(options.image)
         if background in ("image", "blur") and image is not None:
@@ -81,8 +83,8 @@ class ExportStage(Stage):
         subtitles = ctx.output_of("subtitles")
         plan = load_plan(subtitles / PLAN_FILE)
         options = video_options(ctx)
-        output = out_dir / "video.mp4"
-        export_mp4(
+        output = out_dir / f"video.{options.container}"
+        export_video(
             project,
             ctx.paths,
             plan,
@@ -92,12 +94,15 @@ class ExportStage(Stage):
             progress=ctx.progress,
             cancel=ctx.cancel,
         )
+        extra = second_track(project, ctx.paths, options)
         return {
-            "file": "video.mp4",
+            "file": output.name,
+            "container": options.container,
             "bytes": output.stat().st_size,
             "width": plan.width,
             "height": plan.height,
             "audio": options.audio,
+            "audio_tracks": [options.audio, *([extra] if extra is not None else [])],
             "background": effective_background(project, ctx.paths, options),
         }
 
@@ -105,4 +110,5 @@ class ExportStage(Stage):
         """Expose the video under ``exports/``."""
         project = ctx.store.load()
         name = str(ctx.options.get(OUTPUT_NAME_KEY) or slugify(project.meta.title or "karaoke"))
-        link_or_copy(out_dir / str(result["file"]), ctx.paths.exports / f"{name}.mp4")
+        produced = out_dir / str(result["file"])
+        link_or_copy(produced, ctx.paths.exports / f"{name}{produced.suffix}")

@@ -288,7 +288,14 @@ def _print_summary(store: ProjectStore, report: RunReport) -> None:
 @app.command("export")
 def export_command(
     project: Annotated[Path, typer.Argument(help="專案資料夾 / project folder.")],
-    fmt: Annotated[str, typer.Option("--format", "-f", help="輸出格式 / format: mp4.")] = "mp4",
+    fmt: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="輸出格式 / format: mp4, mkv, ass, lrc, elrc, srt, ultrastar, kfproj.",
+        ),
+    ] = "mp4",
     audio: Annotated[
         str,
         typer.Option("--audio", help="instrumental、guide:-12db、original."),
@@ -305,12 +312,23 @@ def export_command(
     profile: ProfileOption = DEFAULT_PROFILE,
     verbose: VerboseOption = False,
 ) -> None:
-    """匯出影片 / export the karaoke video."""
+    """匯出影片、字幕或歌詞檔 / export a video, subtitles or lyrics."""
     store = open_project(project)
     exported = export_project(
         store, fmt=fmt, audio=audio, res=res, background=background, output=output, profile=profile
     )
     console.print(pick(f"已輸出 [bold]{exported}[/bold]", f"Wrote [bold]{exported}[/bold]"))
+    if fmt.strip().lower() == "ultrastar":
+        media = store.load().media.source or ""
+        suffix = Path(media).suffix or ".mp3"
+        console.print(
+            pick(
+                f"[dim]請把歌曲的媒體檔放在同一個資料夾,並命名為 "
+                f"{exported.name.removesuffix('.ultrastar.txt').removesuffix('.txt')}{suffix}[/dim]",
+                f"[dim]Put the song's media file next to it, named "
+                f"{exported.name.removesuffix('.ultrastar.txt').removesuffix('.txt')}{suffix}[/dim]",
+            )
+        )
 
 
 def export_project(
@@ -323,53 +341,30 @@ def export_project(
     output: Path | None = None,
     profile: str = DEFAULT_PROFILE,
 ) -> Path:
-    """Export a project and return the path of the written file."""
-    from karaforge.io.exporters.video import VideoOptions, parse_audio_option
-    from karaforge.layout.theme import load_theme
-    from karaforge.project.store import slugify
-    from karaforge.stages.export import OPTION_KEY, OUTPUT_NAME_KEY
-    from karaforge.stages.standard import EXPORT_TARGETS
+    """Export a project and return the path of the written file.
 
-    if fmt.lower() != "mp4":
-        raise ExportError(
-            f"還不支援的匯出格式:{fmt}",
-            f"Unsupported export format: {fmt}",
-            hint_zh="目前可用:mp4。",
-            hint_en="Available: mp4.",
+    The file is always produced under the project's ``exports/`` folder; with ``output`` it
+    is copied to that path as well, and that path is returned.
+    """
+    from karaforge.exporting import ExportRequest, export, get_format
+
+    extension = get_format(fmt).suffix
+    name: str | None = None
+    if output is not None:
+        name = (
+            output.name.removesuffix(extension) if output.name.endswith(extension) else output.stem
         )
-    document = store.load()
-    if res is not None:
-        size = parse_resolution(res)
-        if tuple(document.render.resolution) != size:
-            document.render.resolution = size
-            store.save(document)
-    theme = load_theme(document.style.theme).with_overrides(document.style.overrides)
-    mode, level = parse_audio_option(audio)
-    kind = (background or document.render.background.type).lower()
-    if kind not in ("video", "image", "color", "blur"):
-        raise ExportError(
-            f"看不懂的背景選項:{kind}",
-            f"Unrecognised background: {kind}",
-            hint_zh="可用:video、color、image、blur。",
-            hint_en="Use video, color, image or blur.",
+    request = ExportRequest(
+        format=fmt,
+        audio=audio,
+        resolution=parse_resolution(res) if res is not None else None,
+        background=background,
+        name=name,
+    )
+    with pipeline_ui() as (on_progress, on_event):
+        produced = export(
+            store, request, profile=get_profile(profile), progress=on_progress, on_event=on_event
         )
-    options = VideoOptions(
-        audio=mode,
-        guide_db=level,
-        background=kind,
-        color=document.render.background.color or theme.background.color,
-        image=document.render.background.image,
-        dim_bottom=theme.background.dim_bottom,
-    )
-    name = slugify(output.stem if output is not None else document.meta.title or "karaoke")
-    _run(
-        store,
-        get_profile(profile),
-        targets=EXPORT_TARGETS,
-        options={OPTION_KEY: options, OUTPUT_NAME_KEY: name},
-        include_dependencies=False,
-    )
-    produced = store.paths.exports / f"{name}.mp4"
     if output is None:
         return produced
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -411,6 +406,73 @@ def auto_command(
     _run(store, resolve_profile(profile, settings), targets=PROCESS_TARGETS)
     exported = export_project(store, audio=audio, res=res, output=target, profile=profile)
     console.print(pick(f"完成:[bold]{exported}[/bold]", f"Done: [bold]{exported}[/bold]"))
+
+
+@app.command("bench")
+def bench_command(
+    suite: Annotated[str, typer.Option("--suite", help="synthetic 或 real。")] = "synthetic",
+    split: Annotated[
+        str, typer.Option("--split", help="合成測資分組 / split: test, dev, smoke.")
+    ] = "test",
+    profile: ProfileOption = DEFAULT_PROFILE,
+    aligner: Annotated[
+        list[str] | None,
+        typer.Option("--aligner", help="要比較的對齊器,可重複 / aligner(s) to compare."),
+    ] = None,
+    settings: SetOption = None,
+    language: Annotated[
+        list[str] | None, typer.Option("--language", help="zh、en、mixed(可重複)。")
+    ] = None,
+    snr: Annotated[
+        list[int] | None, typer.Option("--snr", help="訊噪比 dB(可重複)/ SNR levels.")
+    ] = None,
+    limit: Annotated[
+        int | None,
+        typer.Option("--limit", help="每種語言只取前 N 首 / first N songs per language."),
+    ] = None,
+    ablation: Annotated[
+        bool, typer.Option("--ablation", help="加跑消融實驗 / also run the ablation study.")
+    ] = False,
+    anchors: Annotated[
+        bool, typer.Option("--anchors/--no-anchors", help="錨點實驗 / anchor experiment.")
+    ] = True,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="報告資料夾。")] = None,
+    verbose: VerboseOption = False,
+) -> None:
+    """執行對齊評測並產生報告 / run the alignment benchmark and write a report."""
+    if suite not in ("synthetic", "real"):
+        raise ExportError(
+            f"沒有這個評測套件:{suite}",
+            f"Unknown suite: {suite}",
+            hint_zh="可用:synthetic、real。",
+            hint_en="Use synthetic or real.",
+        )
+    try:
+        from kfbench.cli import run_bench
+    except ImportError as exc:
+        from karaforge.errors import DependencyMissingError
+
+        raise DependencyMissingError(
+            "評測工具的相依套件沒有安裝。",
+            "The benchmark dependencies are not installed.",
+            hint_zh="請在原始碼目錄執行:uv sync --extra cpu --group bench",
+            hint_en="From a source checkout run: uv sync --extra cpu --group bench",
+            detail=str(exc),
+        ) from exc
+    run_bench(
+        suite=suite,
+        split=split,
+        profile=profile,
+        aligners=aligner,
+        settings=settings,
+        languages=language,
+        snr_levels=snr,
+        limit=limit,
+        ablation=ablation,
+        anchors=anchors,
+        output=output,
+        console=console,
+    )
 
 
 models_app = typer.Typer(

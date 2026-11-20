@@ -161,6 +161,34 @@ def test_open_project_requires_a_project_folder(tmp_path: Path) -> None:
     assert "kf new" in (info.value.hint_en or "")
 
 
+def test_new_with_lrc_lyrics_keeps_line_and_word_times(media: Path, tmp_path: Path) -> None:
+    lrc = tmp_path / "song.lrc"
+    lrc.write_text(
+        "[ti:匯入的歌]\n[ar:某人]\n"
+        "[00:01.00]第一句\n"
+        "[00:03.50]F: <00:03.50>逐<00:03.90>字<00:04.30>\n",
+        encoding="utf-8",
+    )
+    target = tmp_path / "p.kfproj"
+    result = runner.invoke(cli.app, ["new", str(media), "--lyrics", str(lrc), "-o", str(target)])
+    assert result.exit_code == 0, result.output
+    store = ProjectStore(target)
+    project = store.load()
+    assert (project.meta.title, project.meta.artist) == ("匯入的歌", "某人")
+    first, second = project.lines
+    assert first.time_hint == (1000, 3500)
+    assert all(not token.is_timed for token in first.tokens)
+    assert second.singer == "f" and second.time_hint is None
+    assert [(t.text, t.start_ms, t.end_ms, t.locked) for t in second.tokens] == [
+        ("逐", 3500, 3900, True),
+        ("字", 3900, 4300, True),
+    ]
+    # Word-timed lyrics can be exported again straight away, without any processing.
+    exported = cli.export_project(store, fmt="elrc").read_text(encoding="utf-8")
+    assert "[00:03.50]F: <00:03.50>逐<00:03.90>字<00:04.30>" in exported
+    assert "第一句" not in exported  # that line has no word times yet
+
+
 def test_export_rejects_unknown_format_and_background(media: Path, tmp_path: Path) -> None:
     store = create_project(media, tmp_path / "p.kfproj")
     with pytest.raises(ExportError):

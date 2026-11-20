@@ -58,6 +58,11 @@ dependencies = [
 # transitively by audio-separator's ONNX converter).
 cpu = ["torch>=2.6", "torchvision>=0.21"]
 cuda = ["torch>=2.6", "torchvision>=0.21"]
+# The Qwen3-ForcedAligner model code (Apache-2.0).  It pins exact versions of transformers and
+# accelerate and brings a web-demo stack along, which is why it is not a core dependency; with
+# it installed, `align.aligner=auto` (the default of the gpu-quality profile) uses the hybrid
+# CTC + Qwen aligner.
+qwen = ["qwen-asr>=0.0.6"]
 
 [project.scripts]
 kf = "karaforge.cli:main"
@@ -199,7 +204,11 @@ markers = [
     "gpu: needs CUDA",
     "network: needs internet access",
 ]
-filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+filterwarnings = [
+    "error::pytest.PytestUnraisableExceptionWarning",
+    # pyworld (benchmark vocoder) still imports the deprecated pkg_resources.
+    "ignore:pkg_resources is deprecated:UserWarning",
+]
 
 [tool.coverage.run]
 source = ["karaforge"]

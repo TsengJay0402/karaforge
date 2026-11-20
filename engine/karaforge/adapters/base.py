@@ -192,12 +192,29 @@ class AlignRequest:
     window.  Aligners can use them to soak up that sound; they are never returned."""
     suffix_units: Sequence[AlignUnit] = ()
     """The first tokens of the next line, when its head may be audible at the end."""
+    offset_s: float | None = None
+    """Where ``audio`` begins inside the recording last passed to ``prepare`` (see
+    :class:`Aligner`); ``None`` when the window is not a slice of that recording."""
     extra: dict[str, object] = field(default_factory=dict[str, object])
 
 
 @runtime_checkable
 class Aligner(Protocol):
-    """Forced aligner: given audio and its transcript, finds when each unit is sung."""
+    """Forced aligner: given audio and its transcript, finds when each unit is sung.
+
+    Optional extras that the alignment passes look for with ``getattr``:
+
+    ``prepare(audio)``
+        Called once with the whole vocal stem before the per-line requests.  An aligner whose
+        acoustic model is independent of the text (CTC) can run it once here and answer every
+        request — and every later re-alignment of the same stem — from the stored result.
+    ``max_window_s``
+        Longest window the aligner accepts.
+    ``lead_ms``
+        The aligner's systematic lateness, subtracted from every start it reports.
+    ``weak_score``
+        Score below which the aligner had no real evidence for a token's position.
+    """
 
     @property
     def info(self) -> AdapterInfo:

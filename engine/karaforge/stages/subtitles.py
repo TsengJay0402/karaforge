@@ -16,6 +16,17 @@ from karaforge.project.schema import Project
 
 ASS_FILE = "subtitles.ass"
 PLAN_FILE = "plan.json"
+RESOLUTION_KEY = "resolution"
+"""Key in :attr:`StageContext.options` for a one-off output size ``[width, height]``."""
+
+
+def sized_project(ctx: StageContext) -> Project:
+    """The project, with the output size of this run applied (never saved)."""
+    project = ctx.store.load()
+    size = ctx.options.get(RESOLUTION_KEY)
+    if size:
+        project.render.resolution = (int(size[0]), int(size[1]))
+    return project
 
 
 def require_aligned(project: Project) -> None:
@@ -53,7 +64,7 @@ class SubtitlesStage(Stage):
 
     def inputs(self, ctx: StageContext) -> StageInputs:
         """The document parts that affect the picture, the theme and the font files."""
-        project = ctx.store.load()
+        project = sized_project(ctx)
         theme = load_theme(project.style.theme).with_overrides(project.style.overrides)
         library = default_library()
         fonts = {
@@ -80,7 +91,7 @@ class SubtitlesStage(Stage):
 
     def run(self, ctx: StageContext, out_dir: Path) -> JsonDict:
         """Build the plan and the script."""
-        project = ctx.store.load()
+        project = sized_project(ctx)
         require_aligned(project)
         plan = build_plan(project)
         (out_dir / PLAN_FILE).write_text(plan.model_dump_json(indent=1), encoding="utf-8")

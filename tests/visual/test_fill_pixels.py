@@ -20,7 +20,7 @@ import pytest
 
 from karaforge.ass import render_ass
 from karaforge.audio.io import write_wav
-from karaforge.io.exporters.video import VideoOptions, export_mp4
+from karaforge.io.exporters.video import VideoOptions, export_video
 from karaforge.layout.engine import build_plan
 from karaforge.layout.plan import PlanLine, RenderPlan
 from karaforge.layout.theme import Theme, load_theme
@@ -299,7 +299,7 @@ def test_exported_video_shows_the_fill_at_the_right_place(work_dir: Path) -> Non
 
     plan = build_plan(project, palette_theme())
     output = work_dir / "blocks.mp4"
-    export_mp4(
+    export_video(
         project,
         store.paths,
         plan,

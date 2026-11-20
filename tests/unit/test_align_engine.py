@@ -60,7 +60,8 @@ def test_each_line_is_aligned_in_its_padded_window() -> None:
     assert all(token.score == 0.8 and not token.locked for line in result for token in line)
     assert [unit.text for unit in aligner.requests[0].units] == ["一", "二", "三", "四"]
     assert aligner.requests[0].units[0].reading == "yi"
-    assert aligner.requests[0].open_start and aligner.requests[0].open_end
+    # Nothing else is sung near either window, so neither is "open".
+    assert not any(request.open_start or request.open_end for request in aligner.requests)
 
 
 def test_window_is_clamped_to_the_audio() -> None:
@@ -79,7 +80,7 @@ def test_locked_tokens_split_the_line_into_bounded_runs() -> None:
     ]
     # Run 1: tokens 0-1 from the window start (10 - 1 s pad) up to the first lock.
     assert aligner.requests[0].audio.size / MODEL_RATE == pytest.approx(3.0)
-    assert aligner.requests[0].open_start is True
+    assert aligner.requests[0].open_start is False  # no other line before it
     assert aligner.requests[0].open_end is False
     # Run 2: tokens 3-4 strictly between the two locks.
     assert aligner.requests[1].audio.size / MODEL_RATE == pytest.approx(2.6)
@@ -132,6 +133,31 @@ def test_neighbouring_lines_are_offered_as_context_when_windows_touch() -> None:
     assert [unit.text for unit in second.prefix_units] == ["三", "四", "五", "六"]
     assert [unit.text for unit in second.suffix_units] == []
     assert list(third.prefix_units) == []
+    # "Open" means: a neighbour may be audible at that end of the window.
+    assert [(r.open_start, r.open_end) for r in aligner.requests] == [
+        (False, True),
+        (True, False),
+        (False, False),
+    ]
+
+
+def test_context_can_be_switched_off_but_the_window_stays_open() -> None:
+    aligner = FakeAligner()
+    lines = [lyric_line("L1", "一二三四五六"), lyric_line("L2", "七八")]
+    fine_align(
+        lines,
+        [window(10, 12, 6), window(12.5, 13.5, 2)],
+        silence(60.0),
+        aligner,
+        language="zh-TW",
+        pad_s=1.0,
+        progress=null_progress,
+        cancel=CancelToken(),
+        context_tokens=0,
+    )
+    first, second = aligner.requests
+    assert list(first.suffix_units) == [] and list(second.prefix_units) == []
+    assert first.open_end and second.open_start
 
 
 def test_singing_at_the_window_edge_also_triggers_context() -> None:
@@ -141,6 +167,7 @@ def test_singing_at_the_window_edge_also_triggers_context() -> None:
     features = make_features(60.0, [(5.0, 19.5)])
     run_fine(lines, [window(5, 6, 2), window(20, 21, 2)], aligner, features=features)
     assert [unit.text for unit in aligner.requests[1].prefix_units] == ["一", "二"]
+    assert aligner.requests[1].open_start is True
 
 
 def test_window_longer_than_the_aligner_limit_is_shortened() -> None:
@@ -358,3 +385,24 @@ def test_fingerprint_ignores_unlocked_times_but_not_text_or_locks() -> None:
     assert alignment_fingerprint(build(), ["L001"]) != base
     other_text = project_with(Line(id="L001", tokens=[Token(text="二")]))
     assert alignment_fingerprint(other_text, None) != base
+
+
+def test_identical_requests_are_answered_from_memory() -> None:
+    aligner = FakeAligner()
+    lines = [lyric_line("L1", "一二三四"), lyric_line("L2", "五六")]
+    windows = [window(10.0, 14.0, 4), window(20.0, 22.0, 2)]
+    first = run_fine(lines, windows, aligner)
+    assert len(aligner.requests) == 2
+    second = run_fine(lines, windows, aligner)
+    assert len(aligner.requests) == 2  # nothing was asked again
+    assert [[t.start_s for t in line] for line in second] == [
+        [t.start_s for t in line] for line in first
+    ]
+    # Locking a token changes the runs of its line only: line 2 is still remembered.
+    locked = [lyric_line("L1", "一二三四", locked={1: (11.0, 11.3)}), lines[1]]
+    run_fine(locked, windows, aligner)
+    assert len(aligner.requests) == 4  # two new runs around the lock in line 1
+    # Another aligner (or another audio) never reuses these answers.
+    other = FakeAligner()
+    run_fine(lines, windows, other)
+    assert len(other.requests) == 2

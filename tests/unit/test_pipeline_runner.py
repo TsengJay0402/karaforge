@@ -15,6 +15,7 @@ from karaforge.pipeline import (
     StageInputs,
     get_profile,
 )
+from karaforge.pipeline.runner import ELAPSED_KEY, RunReport
 from karaforge.pipeline.stage import JsonDict, link_or_copy
 from karaforge.project import Project, ProjectStore
 from karaforge.runtime import CancelToken
@@ -131,6 +132,11 @@ def make(store: ProjectStore, **options: object) -> StageContext:
     return StageContext(store=store, profile=get_profile("cpu-lite"), options=dict(options))
 
 
+def payload(report: RunReport, stage: str) -> JsonDict:
+    """A stage's result without the bookkeeping the runner adds."""
+    return {key: value for key, value in report[stage].result.items() if key != ELAPSED_KEY}
+
+
 def pipeline(recorder: Recorder) -> PipelineRunner:
     return PipelineRunner([CountStage(recorder), UpperStage(recorder), SourceStage(recorder)])
 
@@ -144,7 +150,8 @@ def test_stages_run_in_dependency_order_whatever_the_registration_order(
     report = runner.run(make(store))
     assert recorder.runs == ["source", "upper", "count"]
     assert report.executed == ["source", "upper", "count"]
-    assert report["count"].result == {"count": 5}
+    assert payload(report, "count") == {"count": 5}
+    assert report["count"].result[ELAPSED_KEY] >= 0.0
     assert (store.paths.media / "upper.txt").read_text() == "HELLO"
 
 
@@ -159,7 +166,7 @@ def test_second_run_is_served_from_cache_but_still_published(store: ProjectStore
     assert report.executed == []
     assert recorder.publishes.count("upper") == 2
     assert (store.paths.media / "upper.txt").read_text() == "HELLO"
-    assert report["count"].result == {"count": 5}
+    assert payload(report, "count") == {"count": 5}
     assert report["count"].cached
 
 
@@ -171,7 +178,7 @@ def test_changed_parameter_reruns_only_what_depends_on_it(store: ProjectStore) -
     report = runner.run(make(store, suffix="!!"))
     assert recorder.runs == ["upper", "count"]
     assert report.cached == ["source"]
-    assert report["count"].result == {"count": 7}
+    assert payload(report, "count") == {"count": 7}
 
 
 def test_unchanged_output_stops_the_rerun_from_spreading(store: ProjectStore) -> None:
@@ -218,7 +225,7 @@ def test_targets_without_dependencies_run_exactly_those_stages(store: ProjectSto
     report = runner.run(make(store, text="other"), targets=["count"], include_dependencies=False)
     assert recorder.runs == ["count"]
     assert [stage.stage for stage in report.stages] == ["count"]
-    assert report["count"].result == {"count": 14}
+    assert payload(report, "count") == {"count": 14}
 
 
 def test_stage_that_is_not_needed_is_skipped(store: ProjectStore) -> None:
@@ -363,6 +370,6 @@ def test_corrupt_cache_entry_is_recomputed(store: ProjectStore) -> None:
     (store.paths.cache / "source" / key / "result.json").write_text("{broken", encoding="utf-8")
     again = runner.run(make(store))
     assert again.executed == ["source"]
-    assert json.loads((store.paths.cache / "source" / key / "result.json").read_text()) == {
-        "length": 5
-    }
+    stored = json.loads((store.paths.cache / "source" / key / "result.json").read_text())
+    assert stored["length"] == 5
+    assert ELAPSED_KEY in stored

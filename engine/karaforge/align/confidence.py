@@ -35,6 +35,8 @@ def coarse_agreement(token: RefinedToken, hint: float | None, window: LineWindow
         return 0.3 * window.quality + 0.7 * closeness
     if window.source == "anchor":
         return 0.8
+    if window.source == "hint":
+        return 0.6
     if window.source == "asr":
         return 0.5 * window.quality
     return 0.15 if window.source == "regions" else 0.05

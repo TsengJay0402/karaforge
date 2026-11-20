@@ -1,4 +1,10 @@
-"""Video export with ffmpeg: MP4 with burned-in subtitles."""
+"""Video export with ffmpeg.
+
+* **MP4** — H.264 + AAC with the subtitles burned into the picture; plays anywhere.
+* **MKV** — the same picture *without* subtitles, plus the ASS script as a subtitle track,
+  the fonts it needs as attachments, and two audio tracks (accompaniment and original song)
+  to switch between in the player.
+"""
 
 from __future__ import annotations
 
@@ -20,14 +26,23 @@ from karaforge.tools import ffmpeg
 
 AudioMode = Literal["instrumental", "guide", "original"]
 BackgroundMode = Literal["video", "image", "color", "blur"]
-VIDEO_EXPORT_VERSION = "1"
+Container = Literal["mp4", "mkv"]
+VIDEO_EXPORT_VERSION = "2"
+_FONT_MIME = {".otf": "application/vnd.ms-opentype", ".ttf": "application/x-truetype-font"}
+_TRACK_TITLES: dict[str, str] = {
+    "instrumental": "伴唱 / Karaoke",
+    "guide": "伴唱+導唱 / Karaoke with guide vocal",
+    "original": "原唱 / Original",
+}
 
 
 @dataclass(frozen=True)
 class VideoOptions:
     """Settings of a video export."""
 
+    container: Container = "mp4"
     audio: AudioMode = "instrumental"
+    """The audio of an MP4, and the first (default) track of an MKV."""
     guide_db: float = -12.0
     """Level of the guide vocal relative to the original, for ``audio="guide"``."""
     background: BackgroundMode = "video"
@@ -89,7 +104,22 @@ def effective_background(
     return "color"
 
 
-def export_mp4(
+def second_track(project: Project, paths: ProjectPaths, options: VideoOptions) -> AudioMode | None:
+    """The alternative audio track of an MKV, if the project has the material for it.
+
+    The first track is whatever ``options.audio`` asks for; the second is the original song
+    when the first is an accompaniment, and the accompaniment otherwise.
+    """
+    if options.container != "mkv":
+        return None
+    if options.audio == "original":
+        instrumental = paths.resolve(project.media.instrumental)
+        return "instrumental" if instrumental is not None and instrumental.is_file() else None
+    source = paths.resolve(project.media.source)
+    return "original" if source is not None and source.is_file() else None
+
+
+def export_video(
     project: Project,
     paths: ProjectPaths,
     plan: RenderPlan,
@@ -100,7 +130,7 @@ def export_mp4(
     progress: ProgressFn = null_progress,
     cancel: CancelToken | None = None,
 ) -> None:
-    """Render an MP4 (H.264 + AAC) with the subtitles burned in.
+    """Render the karaoke video in the container chosen by ``options``.
 
     Args:
         project: The project being exported.
@@ -114,9 +144,11 @@ def export_mp4(
 
     Raises:
         ExportError: If a needed input is missing or ffmpeg fails.
-        ToolMissingError: If ffmpeg lacks libass.
+        ToolMissingError: If ffmpeg lacks libass (needed to burn subtitles into an MP4).
     """
-    ffmpeg.require_libass()
+    soft_subtitles = options.container == "mkv"
+    if not soft_subtitles:
+        ffmpeg.require_libass()
     width, height = plan.width, plan.height
     fps = project.render.fps
     duration_ms = project.meta.duration_ms
@@ -133,9 +165,12 @@ def export_mp4(
     try:
         (work / "subs.ass").write_text(ass_text, encoding="utf-8")
         library = default_library()
+        font_files: list[Path] = []
         for font in plan.fonts:
             face = library.find(font.family)
-            link_or_copy(face.path, work / "fonts" / face.path.name)
+            if face.path not in font_files:
+                font_files.append(face.path)
+                link_or_copy(face.path, work / "fonts" / face.path.name)
 
         inputs: list[str] = []
         filters: list[str] = []
@@ -202,22 +237,29 @@ def export_mp4(
             filters.append(f"[bg][{next_index}:v]overlay=0:0:eof_action=repeat[dimmed]")
             video_label = "dimmed"
             next_index += 1
-        filters.append(f"[{video_label}]ass=subs.ass:fontsdir=fonts,format=yuv420p[v]")
+        if soft_subtitles:
+            filters.append(f"[{video_label}]format=yuv420p[v]")
+        else:
+            filters.append(f"[{video_label}]ass=subs.ass:fontsdir=fonts,format=yuv420p[v]")
 
         # ---- audio
         instrumental = paths.resolve(project.media.instrumental)
         vocals = paths.resolve(project.media.vocals)
-        audio_map: str
-        if options.audio == "original":
+        instrumental_index: int | None = None
+
+        def original_track() -> str:
+            nonlocal source_index, next_index
             if source is None or not source.is_file():
                 raise ExportError("找不到原始媒體檔。", "The source media file is missing.")
             if source_index is None:
                 link_or_copy(source, work / f"source{source.suffix}")
-                inputs += ["-i", f"source{source.suffix}"]
+                inputs.extend(["-i", f"source{source.suffix}"])
                 source_index = next_index
                 next_index += 1
-            audio_map = f"{source_index}:a:0"
-        else:
+            return f"{source_index}:a:0"
+
+        def instrumental_track() -> str:
+            nonlocal instrumental_index, next_index
             if instrumental is None or not instrumental.is_file():
                 raise ExportError(
                     "還沒有伴奏軌,無法以伴唱模式匯出。",
@@ -225,50 +267,75 @@ def export_mp4(
                     hint_zh="請先執行 `kf run <專案>` 做人聲分離,或改用 --audio original。",
                     hint_en="Run `kf run <project>` first, or export with --audio original.",
                 )
-            link_or_copy(instrumental, work / "instrumental.wav")
-            inputs += ["-i", "instrumental.wav"]
-            instrumental_index = next_index
-            next_index += 1
-            if options.audio == "guide":
-                if vocals is None or not vocals.is_file():
-                    raise ExportError("找不到人聲軌。", "The vocal stem is missing.")
-                link_or_copy(vocals, work / "vocals.wav")
-                inputs += ["-i", "vocals.wav"]
-                filters.append(
-                    f"[{next_index}:a]volume={options.guide_db:g}dB[guide];"
-                    f"[{instrumental_index}:a][guide]amix=inputs=2:normalize=0[a]"
-                )
+            if instrumental_index is None:
+                link_or_copy(instrumental, work / "instrumental.wav")
+                inputs.extend(["-i", "instrumental.wav"])
+                instrumental_index = next_index
                 next_index += 1
-                audio_map = "[a]"
-            else:
-                audio_map = f"{instrumental_index}:a:0"
+            return f"{instrumental_index}:a:0"
 
-        arguments = [
-            *inputs,
-            "-filter_complex",
-            ";".join(filters),
-            "-map",
-            "[v]",
-            "-map",
-            audio_map,
-            "-t",
-            seconds,
-            "-c:v",
-            options.encoder,
-        ]
+        def track(mode: AudioMode) -> str:
+            nonlocal next_index
+            if mode == "original":
+                return original_track()
+            base = instrumental_track()
+            if mode != "guide":
+                return base
+            if vocals is None or not vocals.is_file():
+                raise ExportError("找不到人聲軌。", "The vocal stem is missing.")
+            link_or_copy(vocals, work / "vocals.wav")
+            inputs.extend(["-i", "vocals.wav"])
+            filters.append(
+                f"[{next_index}:a]volume={options.guide_db:g}dB[guide];"
+                f"[{base}][guide]amix=inputs=2:normalize=0[a]"
+            )
+            next_index += 1
+            return "[a]"
+
+        audio_modes: list[AudioMode] = [options.audio]
+        extra = second_track(project, paths, options)
+        if extra is not None:
+            audio_modes.append(extra)
+        audio_maps = [track(mode) for mode in audio_modes]
+
+        subtitle_index: int | None = None
+        if soft_subtitles:
+            inputs += ["-i", "subs.ass"]
+            subtitle_index = next_index
+            next_index += 1
+
+        arguments = [*inputs, "-filter_complex", ";".join(filters), "-map", "[v]"]
+        for audio_map in audio_maps:
+            arguments += ["-map", audio_map]
+        if subtitle_index is not None:
+            arguments += ["-map", f"{subtitle_index}:s:0", "-c:s", "ass"]
+        arguments += ["-t", seconds, "-c:v", options.encoder]
         if options.encoder == "libx264":
             arguments += ["-preset", options.preset, "-crf", str(options.crf)]
-        arguments += [
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "aac",
-            "-b:a",
-            options.audio_bitrate,
-            "-movflags",
-            "+faststart",
-            "out.mp4",
-        ]
+        arguments += ["-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", options.audio_bitrate]
+        result_name = f"out.{options.container}"
+        if soft_subtitles:
+            for index, mode in enumerate(audio_modes):
+                arguments += [
+                    f"-metadata:s:a:{index}",
+                    f"title={_TRACK_TITLES[mode]}",
+                    f"-disposition:a:{index}",
+                    "default" if index == 0 else "0",
+                ]
+            arguments += ["-metadata:s:s:0", "title=KTV", "-disposition:s:0", "default"]
+            for index, font_file in enumerate(font_files):
+                mime = _FONT_MIME.get(font_file.suffix.lower(), "application/octet-stream")
+                arguments += [
+                    "-attach",
+                    f"fonts/{font_file.name}",
+                    f"-metadata:s:t:{index}",
+                    f"mimetype={mime}",
+                ]
+            if project.meta.title:
+                arguments += ["-metadata", f"title={project.meta.title}"]
+        else:
+            arguments += ["-movflags", "+faststart"]
+        arguments.append(result_name)
         try:
             ffmpeg.run_ffmpeg(
                 arguments,
@@ -287,7 +354,7 @@ def export_mp4(
                 detail=exc.detail,
             ) from exc
         output.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(work / "out.mp4"), output)
+        shutil.move(str(work / result_name), output)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -296,8 +363,10 @@ __all__ = [
     "VIDEO_EXPORT_VERSION",
     "AudioMode",
     "BackgroundMode",
+    "Container",
     "VideoOptions",
     "effective_background",
-    "export_mp4",
+    "export_video",
     "parse_audio_option",
+    "second_track",
 ]

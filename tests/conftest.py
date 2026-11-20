@@ -65,6 +65,14 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
                 )
 
 
+@pytest.fixture(autouse=True)
+def fresh_aligner_memo() -> None:
+    """Aligner answers are remembered per process; tests must not see each other's."""
+    from karaforge.align.fine import clear_memo
+
+    clear_memo()
+
+
 @pytest.fixture(scope="session")
 def repo_root() -> Path:
     """Root of the source checkout."""

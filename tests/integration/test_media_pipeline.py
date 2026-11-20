@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -12,13 +13,14 @@ import pytest
 from karaforge import cli
 from karaforge.audio.io import read_wav, write_wav
 from karaforge.errors import ExportError, MediaError, PipelineError
+from karaforge.io.exporters.png import write_rgba_png
 from karaforge.io.exporters.video import parse_audio_option
 from karaforge.pipeline import get_profile
 from karaforge.project import ProjectStore
 from karaforge.project.create import create_project
 from karaforge.stages.standard import run_pipeline
 from karaforge.tools import ffmpeg
-from support import timed_line
+from support import grab_frames, timed_line
 
 pytestmark = pytest.mark.ffmpeg
 
@@ -148,11 +150,127 @@ def test_export_mp4_with_each_audio_mode(work_dir: Path, audio: str) -> None:
 
 def test_export_uses_a_colour_background_for_audio_only_sources(work_dir: Path) -> None:
     store = prepared_project(work_dir, video=False)
+    revision = store.load().revision
     output = cli.export_project(store, res="480p")
     assert output == store.paths.exports / "tone.mp4"
     found = streams(output)
     assert (found["video"].width, found["video"].height) == (854, 480)
-    assert store.load().render.resolution == (854, 480)
+    # The size given for one export is not written into the project.
+    assert store.load().render.resolution == (640, 360)
+    assert store.load().revision == revision
+
+
+def test_export_mkv_has_soft_subtitles_fonts_and_two_audio_tracks(work_dir: Path) -> None:
+    store = prepared_project(work_dir, video=True)
+    project = store.load()
+    project.meta.title = "測試歌"
+    store.save(project)
+    output = cli.export_project(store, fmt="mkv")
+    assert output == store.paths.exports / "測試歌.mkv"
+    info = ffmpeg.probe(output)
+    assert "matroska" in info.format_name
+    assert info.tags.get("title") == "測試歌"
+    video = info.video
+    assert video is not None and (video.codec, video.width, video.height) == ("h264", 640, 360)
+    audio = [stream for stream in info.streams if stream.kind == "audio"]
+    assert [stream.codec for stream in audio] == ["aac", "aac"]
+    assert [stream.title for stream in audio] == ["伴唱 / Karaoke", "原唱 / Original"]
+    assert [stream.is_default for stream in audio] == [True, False]
+    assert [(stream.codec, stream.title) for stream in info.subtitles] == [("ass", "KTV")]
+    fonts = info.attachments
+    assert [font.filename for font in fonts] == ["GenSenRounded2TW-B.otf"]
+    assert fonts[0].mimetype == "application/vnd.ms-opentype"
+    assert info.duration_ms == pytest.approx(4000, abs=200)
+
+    # The subtitle track is the same script that would be burned into an MP4.
+    extracted = output.with_name("extracted.ass")
+    ffmpeg.run_ffmpeg(
+        ["-i", output.name, "-map", "0:s:0", "-c:s", "copy", extracted.name], cwd=output.parent
+    )
+    script = cli.export_project(store, fmt="ass").read_text(encoding="utf-8")
+    dialogue = [row for row in script.splitlines() if row.startswith("Dialogue:")]
+    kept = extracted.read_text(encoding="utf-8")
+    assert len([row for row in kept.splitlines() if row.startswith("Dialogue:")]) == len(dialogue)
+    assert "Style: " in kept and "GenSenRounded2 TW B" in kept
+
+
+def test_export_mkv_with_original_audio_first_and_without_a_source_video(work_dir: Path) -> None:
+    store = prepared_project(work_dir, video=False)
+    output = cli.export_project(store, fmt="mkv", audio="original", output=work_dir / "o.mkv")
+    info = ffmpeg.probe(output)
+    audio = [stream for stream in info.streams if stream.kind == "audio"]
+    assert [stream.title for stream in audio] == ["原唱 / Original", "伴唱 / Karaoke"]
+    assert info.video is not None and len(info.subtitles) == 1
+
+
+def test_text_exports_through_the_cli(work_dir: Path) -> None:
+    store = prepared_project(work_dir, video=True)
+    lrc = cli.export_project(store, fmt="lrc")
+    assert lrc == store.paths.exports / "clip.lrc"
+    assert "[00:01.00]一二三四" in lrc.read_text(encoding="utf-8")
+    enhanced = cli.export_project(store, fmt="elrc")
+    assert enhanced.name == "clip.enhanced.lrc"
+    assert "<00:01.00>一<00:01.40>二" in enhanced.read_text(encoding="utf-8")
+    srt = cli.export_project(store, fmt="srt", output=work_dir / "named.srt")
+    assert srt.read_text(encoding="utf-8").startswith("1\n00:00:01,000 --> 00:00:02,600\n一二三四")
+    assert (store.paths.exports / "named.srt").is_file()
+    ass = cli.export_project(store, fmt="ass")
+    assert "[V4+ Styles]" in ass.read_text(encoding="utf-8")
+    archive = cli.export_project(store, fmt="kfproj")
+    assert archive.name == "clip.kfproj.zip"
+    with zipfile.ZipFile(archive) as packed:
+        assert "song.kfproj/project.json" in packed.namelist()
+        assert "song.kfproj/media/audio.wav" in packed.namelist()
+        assert not any("cache/" in name or "exports/" in name for name in packed.namelist())
+    with pytest.raises(ExportError) as info:
+        cli.export_project(store, fmt="avi")
+    assert "ultrastar" in (info.value.hint_en or "")
+
+
+def test_ultrastar_export_takes_note_pitches_from_the_vocal_stem(work_dir: Path) -> None:
+    store = prepared_project(work_dir, video=True)
+    # A vocal stem that "sings" A3 (220 Hz) and then E4 (329.63 Hz).
+    rate = 16000
+    time = np.arange(4 * rate) / rate
+    wave = np.where(time < 2.5, np.sin(2 * np.pi * 220.0 * time), np.sin(2 * np.pi * 329.63 * time))
+    write_wav(store.paths.media / "vocals.wav", (0.4 * wave).astype(np.float32), rate)
+    output = cli.export_project(store, fmt="ultrastar")
+    assert output.name == "clip.ultrastar.txt"
+    text = output.read_text(encoding="utf-8")
+    assert "#MP3:clip.mp4" in text and "#VIDEO:clip.mp4" in text
+    notes = [row.split(" ") for row in text.splitlines() if row.startswith(":")]
+    assert [row[4] for row in notes] == list("一二三四五六七")
+    # A3 is 3 semitones below C4, E4 is 4 above; line 2 starts at 2.6 s.
+    assert [int(row[3]) for row in notes] == [-3, -3, -3, -3, 4, 4, 4]
+    # The pitch track is cached.
+    from karaforge.stages.standard import run_pipeline as run
+
+    again = run(
+        store, profile=get_profile("cpu-lite"), targets=("pitch",), include_dependencies=False
+    )
+    assert again.cached == ["pitch"]
+
+
+@pytest.mark.parametrize("mode", ["image", "blur"])
+def test_export_with_a_picture_as_background(work_dir: Path, mode: str) -> None:
+    store = prepared_project(work_dir, video=False)
+    # A picture whose left half is red and whose right half is blue.
+    row = bytes([200, 30, 30, 255]) * 32 + bytes([30, 30, 200, 255]) * 32
+    write_rgba_png(store.paths.media / "cover.png", 64, 36, [row] * 36)
+    project = store.load()
+    project.render.background.type = mode  # pyright: ignore[reportAttributeAccessIssue]
+    project.render.background.image = "media/cover.png"
+    store.save(project)
+    output = cli.export_project(store)
+    (work_dir / "grab").mkdir()
+    frame = grab_frames(output, [0.2], work_dir / "grab", fps=project.render.fps)[0]
+    assert frame.shape == (360, 640, 3)
+    left, right = frame[20, 30].astype(int), frame[20, 610].astype(int)
+    assert left[0] > left[2] + 60 and right[2] > right[0] + 60
+    if mode == "blur":
+        # The sharp copy in the middle is brighter than the darkened, blurred surroundings.
+        inside = frame[150, 200].astype(int)
+        assert inside[0] > left[0] + 10
 
 
 def test_export_is_cached_and_never_reruns_alignment(work_dir: Path) -> None:

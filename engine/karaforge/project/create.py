@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 
 from karaforge.errors import MediaError, ProjectError
-from karaforge.io.importers.lyrics_txt import ParsedLyrics, parse_lyrics_file
+from karaforge.io.importers import ParsedLyrics, load_lyrics
 from karaforge.pipeline.hashing import sha256_file
 from karaforge.project.schema import Project
 from karaforge.project.store import PROJECT_SUFFIX, ProjectStore, slugify
@@ -58,7 +58,8 @@ def create_project(
     Args:
         media: Source video or audio file.
         project_dir: Folder to create.
-        lyrics: Lyrics file (``.txt``); omit to draft the lyrics by speech recognition.
+        lyrics: Lyrics file (``.txt``, ``.lrc``, ``.srt`` or ``.ass``); omit to draft the lyrics
+            by speech recognition.
         language: Language of the song, e.g. ``zh-TW`` or ``en``; overrides the lyrics file.
         title: Song title; overrides the lyrics file.
         artist: Artist; overrides the lyrics file.
@@ -82,7 +83,7 @@ def create_project(
             hint_zh="支援的格式:" + "、".join(ext.lstrip(".") for ext in MEDIA_EXTENSIONS),
             hint_en="Supported: " + ", ".join(ext.lstrip(".") for ext in MEDIA_EXTENSIONS),
         )
-    parsed: ParsedLyrics | None = parse_lyrics_file(lyrics) if lyrics is not None else None
+    parsed: ParsedLyrics | None = load_lyrics(lyrics) if lyrics is not None else None
 
     project = Project()
     if parsed is not None:
@@ -152,7 +153,7 @@ def create_or_update_project(
         )
     changed = False
     if lyrics is not None:
-        parsed = parse_lyrics_file(lyrics)
+        parsed = load_lyrics(lyrics)
         current = [(line.singer, line.paragraph, line.text) for line in project.lines]
         wanted = [(line.singer, line.paragraph, line.text) for line in parsed.lines]
         if current != wanted:

@@ -1,4 +1,10 @@
-"""Pydantic models for ``project.json`` (schema version 1).
+"""Pydantic models for ``project.json`` (schema version 2).
+
+Version history:
+
+* **1** — the format of the original specification.
+* **2** — lines can carry a ``time_hint`` (the line-level time of an imported LRC / SRT / ASS
+  file) and tokens can have ``source = "import"`` (word-level timing that came from a file).
 
 Conventions (see ``docs/project-format.md``):
 
@@ -14,9 +20,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-TokenSource = Literal["auto", "manual"]
+TokenSource = Literal["auto", "manual", "import"]
 RubySource = Literal["auto", "manual"]
 BackgroundType = Literal["video", "image", "color", "blur"]
 
@@ -95,6 +101,19 @@ class Line(_Model):
     singer: str = "m"
     paragraph: int = Field(default=0, ge=0)
     tokens: list[Token] = Field(default_factory=list[Token])
+    time_hint: tuple[int, int | None] | None = None
+    """``(start_ms, end_ms)`` of the line as given by an imported file with line-level timing
+    (``end_ms`` may be unknown).  The aligner uses it as the line's window instead of
+    searching for the line; it is *not* the line's time — that is always derived from the
+    tokens."""
+
+    @model_validator(mode="after")
+    def _check_hint(self) -> Line:
+        if self.time_hint is not None:
+            start, end = self.time_hint
+            if start < 0 or (end is not None and end < start):
+                raise ValueError("time_hint must be a non-negative, ordered (start, end) pair")
+        return self
 
     @property
     def text(self) -> str:

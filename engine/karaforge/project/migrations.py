@@ -96,3 +96,14 @@ def migrate(
         version += 1
         current["schema_version"] = version
     return current, applied
+
+
+@migration(from_version=1)
+def _add_line_time_hints(data: JsonObject) -> JsonObject:
+    """Version 2 adds ``time_hint`` to every line (no hint for existing projects)."""
+    lines = data.get("lines")
+    if isinstance(lines, list):
+        for line in lines:  # pyright: ignore[reportUnknownVariableType]
+            if isinstance(line, dict):
+                line.setdefault("time_hint", None)  # pyright: ignore[reportUnknownMemberType]
+    return data

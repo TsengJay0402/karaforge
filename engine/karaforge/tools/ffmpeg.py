@@ -176,6 +176,7 @@ def require_libass(tools: FFmpegTools | None = None) -> None:
 class _ProbeDisposition(BaseModel):
     model_config = ConfigDict(extra="ignore")
     attached_pic: int = 0
+    default: int = 0
 
 
 class _ProbeStream(BaseModel):
@@ -192,6 +193,7 @@ class _ProbeStream(BaseModel):
     r_frame_rate: str | None = None
     avg_frame_rate: str | None = None
     disposition: _ProbeDisposition = Field(default_factory=_ProbeDisposition)
+    tags: dict[str, str] = Field(default_factory=dict)
 
 
 class _ProbeFormat(BaseModel):
@@ -223,6 +225,11 @@ class StreamInfo:
     duration_ms: int | None = None
     bit_rate: int | None = None
     is_cover_art: bool = False
+    is_default: bool = False
+    title: str | None = None
+    filename: str | None = None
+    """File name of an attachment stream."""
+    mimetype: str | None = None
 
 
 @dataclass(frozen=True)
@@ -232,7 +239,20 @@ class MediaInfo:
     format_name: str
     duration_ms: int
     streams: tuple[StreamInfo, ...]
+    """Audio and video streams."""
     tags: dict[str, str]
+    extras: tuple[StreamInfo, ...] = ()
+    """Subtitle and attachment streams."""
+
+    @property
+    def subtitles(self) -> tuple[StreamInfo, ...]:
+        """Subtitle streams."""
+        return tuple(s for s in self.extras if s.kind == "subtitle")
+
+    @property
+    def attachments(self) -> tuple[StreamInfo, ...]:
+        """Attached files (fonts in a Matroska file)."""
+        return tuple(s for s in self.extras if s.kind == "attachment")
 
     @property
     def audio(self) -> StreamInfo | None:
@@ -314,24 +334,30 @@ def probe(path: Path, tools: FFmpegTools | None = None) -> MediaInfo:
         ) from exc
     parsed = _ProbeOutput.model_validate_json(raw)
     streams: list[StreamInfo] = []
+    extras: list[StreamInfo] = []
     for stream in parsed.streams:
-        if stream.codec_type not in {"audio", "video"}:
-            continue
-        streams.append(
-            StreamInfo(
-                index=stream.index,
-                kind=stream.codec_type,
-                codec=stream.codec_name,
-                width=stream.width,
-                height=stream.height,
-                sample_rate=_to_int(stream.sample_rate),
-                channels=stream.channels,
-                frame_rate=_to_rate(stream.avg_frame_rate) or _to_rate(stream.r_frame_rate),
-                duration_ms=_to_ms(stream.duration),
-                bit_rate=_to_int(stream.bit_rate),
-                is_cover_art=bool(stream.disposition.attached_pic),
-            )
+        stream_tags = {key.lower(): value for key, value in stream.tags.items()}
+        described = StreamInfo(
+            index=stream.index,
+            kind=stream.codec_type,
+            codec=stream.codec_name,
+            width=stream.width,
+            height=stream.height,
+            sample_rate=_to_int(stream.sample_rate),
+            channels=stream.channels,
+            frame_rate=_to_rate(stream.avg_frame_rate) or _to_rate(stream.r_frame_rate),
+            duration_ms=_to_ms(stream.duration),
+            bit_rate=_to_int(stream.bit_rate),
+            is_cover_art=bool(stream.disposition.attached_pic),
+            is_default=bool(stream.disposition.default),
+            title=stream_tags.get("title"),
+            filename=stream_tags.get("filename"),
+            mimetype=stream_tags.get("mimetype"),
         )
+        if stream.codec_type in {"audio", "video"}:
+            streams.append(described)
+        elif stream.codec_type in {"subtitle", "attachment"}:
+            extras.append(described)
     duration_ms = _to_ms(parsed.format.duration)
     if duration_ms is None:
         duration_ms = max((s.duration_ms or 0 for s in streams), default=0)
@@ -341,6 +367,7 @@ def probe(path: Path, tools: FFmpegTools | None = None) -> MediaInfo:
         duration_ms=duration_ms,
         streams=tuple(streams),
         tags=tags,
+        extras=tuple(extras),
     )
 
 

@@ -9,12 +9,15 @@ which is how a singer sustains a syllable.
 
 from __future__ import annotations
 
+import importlib
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-import pyworld
 from scipy.signal import resample_poly
+
+from karaforge.errors import DependencyMissingError
 
 FloatArray = npt.NDArray[np.float32]
 F64Array = npt.NDArray[np.float64]
@@ -91,7 +94,26 @@ def hz_to_midi(hz: float) -> float:
     return float(69.0 + 12.0 * np.log2(hz / 440.0))
 
 
+def _world() -> Any:
+    """The WORLD vocoder, imported on first use.
+
+    Only generating songs needs it; reading the dataset and running the benchmark on songs
+    that already exist does not.
+    """
+    try:
+        return importlib.import_module("pyworld")
+    except ImportError as exc:
+        raise DependencyMissingError(
+            "缺少 pyworld,無法合成評測用的歌聲。",
+            "pyworld is missing; the benchmark songs cannot be synthesised.",
+            hint_zh="請在原始碼目錄執行:uv sync --extra cpu --group bench",
+            hint_en="From a source checkout run: uv sync --extra cpu --group bench",
+            detail=str(exc),
+        ) from exc
+
+
 def _analyse(clip: FloatArray, sample_rate: int) -> tuple[F64Array, F64Array, F64Array]:
+    pyworld = _world()
     signal = np.ascontiguousarray(clip, dtype=np.float64)
     f0, times = pyworld.dio(
         signal, sample_rate, f0_floor=65.0, f0_ceil=650.0, frame_period=FRAME_MS
@@ -106,6 +128,7 @@ def median_f0(clip: FloatArray, sample_rate: int) -> float | None:
     """Median fundamental frequency of the voiced part of a clip, or ``None`` if unvoiced."""
     if clip.size < sample_rate // 50:
         return None
+    pyworld = _world()
     signal = np.ascontiguousarray(clip, dtype=np.float64)
     f0, times = pyworld.dio(
         signal, sample_rate, f0_floor=65.0, f0_ceil=650.0, frame_period=FRAME_MS
@@ -179,7 +202,7 @@ def render_note(clip: FloatArray, sample_rate: int, spec: NoteSpec) -> FloatArra
     warped_aperiodicity = (1.0 - weight) * aperiodicity[lower] + weight * aperiodicity[upper]
     voiced = f0[np.clip(np.rint(positions).astype(np.int64), 0, frames - 1)] > 0
 
-    synthesised = pyworld.synthesize(
+    synthesised = _world().synthesize(
         np.ascontiguousarray(_pitch_contour(spec, voiced)),
         np.ascontiguousarray(warped_spectrum),
         np.ascontiguousarray(warped_aperiodicity),
