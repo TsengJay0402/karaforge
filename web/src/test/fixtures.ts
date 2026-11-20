@@ -27,7 +27,7 @@ export function timedLine(id: string, texts: string[], start: number, each = 400
 
 export function project(lines: Line[], durationMs = 60_000): Project {
   return {
-    schema_version: 2,
+    schema_version: 3,
     revision: 0,
     meta: {
       title: '測試歌曲',
@@ -36,6 +36,7 @@ export function project(lines: Line[], durationMs = 60_000): Project {
       composer: '',
       language: 'zh-TW',
       duration_ms: durationMs,
+      lyrics_source: 'user',
     },
     media: { source: 'media/source.mp3', audio: 'media/audio.wav', vocals: null, instrumental: null, has_video: false },
     analysis: { tempo_bpm: null, beats_ms: [], vocal_regions: [] },

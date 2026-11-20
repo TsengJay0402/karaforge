@@ -107,3 +107,12 @@ def _add_line_time_hints(data: JsonObject) -> JsonObject:
             if isinstance(line, dict):
                 line.setdefault("time_hint", None)  # pyright: ignore[reportUnknownMemberType]
     return data
+
+
+@migration(from_version=2)
+def _add_lyrics_source(data: JsonObject) -> JsonObject:
+    """Version 3 adds ``meta.lyrics_source``: existing lyrics were given by the user."""
+    meta = data.get("meta")
+    if isinstance(meta, dict):
+        meta.setdefault("lyrics_source", "user")  # pyright: ignore[reportUnknownMemberType]
+    return data

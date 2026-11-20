@@ -119,17 +119,34 @@ def test_version_1_project_is_upgraded_to_the_current_version() -> None:
     assert applied == list(range(1, SCHEMA_VERSION))
     assert migrated["schema_version"] == SCHEMA_VERSION
     assert migrated["lines"][0]["time_hint"] is None
+    assert migrated["meta"]["lyrics_source"] == "user"
     # Nothing else changed.
-    without_hint = json.loads(json.dumps(migrated))
-    del without_hint["lines"][0]["time_hint"]
-    without_hint["schema_version"] = 1
-    assert without_hint == original
+    without_additions = json.loads(json.dumps(migrated))
+    del without_additions["lines"][0]["time_hint"]
+    del without_additions["meta"]["lyrics_source"]
+    without_additions["schema_version"] = 1
+    assert without_additions == original
 
     project = Project.model_validate(migrated)
+    assert project.meta.lyrics_source == "user"
     token = project.lines[0].tokens[0]
     assert (token.text, token.start_ms, token.end_ms, token.ruby) == ("我", 15230, 15610, "ㄨㄛˇ")
     assert project.revision == 42 and project.analysis.vocal_regions == [(1200, 15800)]
     assert project.lines[0].time_hint is None
+
+
+def test_version_2_project_gains_the_lyrics_source() -> None:
+    version_2 = spec_example()
+    version_2["schema_version"] = 2
+    version_2["lines"][0]["time_hint"] = [15000, 18000]
+    migrated, applied = migrate(version_2)
+    assert applied == [2]
+    assert migrated["meta"]["lyrics_source"] == "user"
+    assert migrated["lines"][0]["time_hint"] == [15000, 18000]
+    # A document that already says where its lyrics came from keeps that.
+    version_2["meta"]["lyrics_source"] = "asr"
+    assert migrate(version_2)[0]["meta"]["lyrics_source"] == "asr"
+    assert Project.model_validate(migrated).schema_version == SCHEMA_VERSION
 
 
 def test_store_opens_an_old_project_and_saves_it_in_the_new_format(tmp_path: Path) -> None:

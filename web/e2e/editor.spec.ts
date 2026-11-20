@@ -218,3 +218,30 @@ test('theme changes are previewed, stored in the project and can be saved as a t
   await waitSaved(page)
   expect((await request.delete('/api/themes/e2e-big')).status()).toBe(204)
 })
+
+test('a draft made by speech recognition is announced until it is acknowledged', async ({ page, request }) => {
+  const before = await serverProject(request, 'demo')
+  const stored = (await (await request.get('/api/projects/demo')).json()) as { project: Record<string, unknown> }
+  const meta = stored.project.meta as Record<string, unknown>
+  const mark = async (source: 'asr' | 'user', revision: number) => {
+    const response = await request.put('/api/projects/demo', {
+      data: { project: { ...stored.project, meta: { ...meta, lyrics_source: source } }, revision },
+    })
+    expect(response.ok()).toBe(true)
+    return ((await response.json()) as { revision: number }).revision
+  }
+  const revision = await mark('asr', before.revision)
+  try {
+    await openEditor(page, 'demo')
+    const banner = page.getByTestId('draft-banner')
+    await expect(banner).toContainText('語音辨識產生的草稿')
+    await banner.getByRole('button', { name: '知道了' }).click()
+    await expect(banner).toBeHidden()
+    // The acknowledgement is remembered in this browser.
+    await page.reload()
+    await expect(page.getByTestId('timeline')).toBeVisible()
+    await expect(page.getByTestId('draft-banner')).toHaveCount(0)
+  } finally {
+    await mark('user', revision)
+  }
+})

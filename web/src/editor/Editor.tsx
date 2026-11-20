@@ -207,9 +207,24 @@ function useHotkeys(openDialog: (dialog: Dialog) => void) {
   }, [store, transport, openDialog])
 }
 
+/** Whether the "these lyrics are a draft" notice of a project was dismissed in this browser. */
+function draftNoticeKey(id: string): string {
+  return `karaforge.draft-notice.${id}`
+}
+
+function readDismissed(id: string): boolean {
+  try {
+    return window.localStorage.getItem(draftNoticeKey(id)) === '1'
+  } catch {
+    return false
+  }
+}
+
 function Banners({ onReload }: { onReload: () => void }) {
   const t = useT()
   const { id, store } = useEditor()
+  const isDraft = useEditorState((state) => state.history.present.meta.lyrics_source === 'asr')
+  const [dismissed, setDismissed] = useState(() => readDismissed(id))
   const saveState = useEditorState((state) => state.saveState)
   const saveError = useEditorState((state) => state.saveError)
   const tapMode = useEditorState((state) => state.tapMode)
@@ -236,6 +251,24 @@ function Banners({ onReload }: { onReload: () => void }) {
         <div className="banner info">
           <span>{t('editor.locked.job')}</span>
           <JobProgress job={job} onCancel={() => void api.cancelJob(job.id)} />
+        </div>
+      ) : null}
+      {isDraft && !dismissed ? (
+        <div className="banner info" data-testid="draft-banner">
+          <span>{t('editor.draft')}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setDismissed(true)
+              try {
+                window.localStorage.setItem(draftNoticeKey(id), '1')
+              } catch {
+                // Private windows may refuse storage; the notice then returns on reload.
+              }
+            }}
+          >
+            {t('editor.draft.dismiss')}
+          </button>
         </div>
       ) : null}
       {tapMode !== 'off' ? (

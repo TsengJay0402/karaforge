@@ -8,6 +8,7 @@ import os
 import platform
 import subprocess
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +142,10 @@ def run_bench(
         The output folder.
     """
     log = console or Console()
+    # Read before any work: a run takes hours, and the checkout may move on meanwhile while
+    # this process keeps running the code it loaded at the start.
+    commit = source_revision()
+    started = datetime.now().astimezone()
     overrides = parse_overrides(settings or [])
     configs, main_name, anchor_name = build_configs(
         profile, aligners or [], overrides, ablation=ablation, anchors=anchors
@@ -202,7 +207,9 @@ def run_bench(
             "cpu": platform.processor() or platform.machine(),
             "threads": str(cpu_threads()),
             "device": device.kind,
-            "commit": source_revision(),
+            "commit": commit,
+            "started": started.isoformat(timespec="seconds"),
+            "finished": datetime.now().astimezone().isoformat(timespec="seconds"),
         },
     )
     target = output or runs_root() / "reports" / f"{suite}-{split}-{profile}"

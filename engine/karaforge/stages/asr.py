@@ -22,7 +22,14 @@ _PROMPT_MAX_CHARS = 400
 
 
 def lyrics_prompt(project: Project) -> str | None:
-    """Text used to bias recognition towards the known lyrics: each distinct line once."""
+    """Text used to bias recognition towards the known lyrics: each distinct line once.
+
+    A draft that came out of the recogniser tells it nothing new, so a project whose lyrics
+    are such a draft has no prompt — exactly as when it had no lyrics at all.  That keeps
+    the transcript (and everything computed from it) valid while the draft is corrected.
+    """
+    if project.meta.lyrics_source == "asr":
+        return None
     seen: set[str] = set()
     parts: list[str] = []
     for line in project.lines:

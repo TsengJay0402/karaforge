@@ -80,6 +80,7 @@ export const en: Record<MessageKey, string> = {
   'job.stage.separate': 'Separating vocals and accompaniment',
   'job.stage.analyze': 'Analysing the vocals',
   'job.stage.asr': 'Recognising speech',
+  'job.stage.draft': 'Drafting lyrics',
   'job.stage.align': 'Aligning the lyrics',
   'job.stage.pitch': 'Tracking pitch',
   'job.stage.subtitles': 'Laying out the lyrics',
@@ -124,6 +125,9 @@ export const en: Record<MessageKey, string> = {
   'editor.saving': 'Saving…',
   'editor.unsaved': 'Unsaved changes',
   'editor.saveFailed': 'Saving failed',
+  'editor.draft':
+    'These lyrics are a draft made by speech recognition and may contain wrong or missing words. Proofread them while listening (double-click a line to edit its text), then press Re-align.',
+  'editor.draft.dismiss': 'Got it',
   'editor.conflict':
     'The project was changed elsewhere. Your changes here were not saved, to avoid overwriting it.',
   'editor.conflict.reload': 'Reload (discard the unsaved changes here)',

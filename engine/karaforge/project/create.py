@@ -159,6 +159,7 @@ def create_or_update_project(
         if current != wanted:
             project.singers = parsed.singers
             project.lines = parsed.lines
+            project.meta.lyrics_source = "user"
             changed = True
         before = project.meta.model_dump()
         parsed.apply_meta(project.meta)

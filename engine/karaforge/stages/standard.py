@@ -13,6 +13,7 @@ from karaforge.runtime import CancelToken, ProgressFn, null_progress
 from karaforge.stages.align import AlignStage
 from karaforge.stages.analyze import AnalyzeStage
 from karaforge.stages.asr import AsrStage
+from karaforge.stages.draft import DraftStage
 from karaforge.stages.export import ExportStage
 from karaforge.stages.ingest import IngestStage
 from karaforge.stages.pitch import PitchStage
@@ -31,6 +32,7 @@ def all_stages() -> list[Stage]:
         PitchStage(),
         AnalyzeStage(),
         AsrStage(),
+        DraftStage(),
         AlignStage(),
         SubtitlesStage(),
         ExportStage(),

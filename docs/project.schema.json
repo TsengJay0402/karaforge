@@ -246,6 +246,15 @@
           "minimum": 0,
           "title": "Duration Ms",
           "type": "integer"
+        },
+        "lyrics_source": {
+          "default": "user",
+          "enum": [
+            "user",
+            "asr"
+          ],
+          "title": "Lyrics Source",
+          "type": "string"
         }
       },
       "title": "Meta",
@@ -435,7 +444,7 @@
   "description": "The document stored in ``project.json``.",
   "properties": {
     "schema_version": {
-      "default": 2,
+      "default": 3,
       "title": "Schema Version",
       "type": "integer"
     },
@@ -475,8 +484,8 @@
       "$ref": "#/$defs/Render"
     }
   },
-  "title": "KaraForge project.json (schema version 2)",
+  "title": "KaraForge project.json (schema version 3)",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://karaforge.dev/schema/project-v2.json"
+  "$id": "https://karaforge.dev/schema/project-v3.json"
 }

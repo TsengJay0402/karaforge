@@ -37,6 +37,7 @@ const STAGE_KEYS: Record<string, MessageKey> = {
   separate: 'job.stage.separate',
   analyze: 'job.stage.analyze',
   asr: 'job.stage.asr',
+  draft: 'job.stage.draft',
   align: 'job.stage.align',
   pitch: 'job.stage.pitch',
   subtitles: 'job.stage.subtitles',

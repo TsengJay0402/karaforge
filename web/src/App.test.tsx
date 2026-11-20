@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { App } from './App.tsx'
 import { emitServerEvent } from './api/events.ts'
 import { useI18n } from './i18n/index.ts'
+import { project, token } from './test/fixtures.ts'
 import { HttpFailure, job, mockApi, summary, system } from './test/server.ts'
 
 beforeEach(() => {
@@ -103,7 +104,7 @@ describe('new project wizard', () => {
       'POST /api/projects': () => ({ project: summary('我的歌', { processed: false }), job: job({ project_id: '我的歌' }) }),
       'GET /api/projects/我的歌': () => ({
         summary: summary('我的歌', { processed: false, job: job({ project_id: '我的歌' }) }),
-        project: {},
+        project: project([{ id: 'L001', singer: 'm', paragraph: 0, tokens: [token('第', null, null)], time_hint: null }]),
         media: { source: null, audio: null, vocals: null, instrumental: null },
         exports: [],
       }),
@@ -126,6 +127,36 @@ describe('new project wizard', () => {
     // The current stage is named in the list of stages and above the progress bar.
     expect(screen.getAllByText('分離人聲與伴奏')).toHaveLength(2)
     expect(screen.getByText('40%')).toBeInTheDocument()
+    // The lyrics were given, so no draft has to be made.
+    expect(screen.queryByText('產生歌詞草稿')).not.toBeInTheDocument()
+  })
+
+  it('creates a project without lyrics and shows that they will be drafted', async () => {
+    const calls = mockApi({
+      'GET /api/system': () => system,
+      'GET /api/projects': () => ({ projects: [] }),
+      'POST /api/projects': () => ({ project: summary('清唱', { processed: false }), job: job({ project_id: '清唱' }) }),
+      'GET /api/projects/清唱': () => ({
+        summary: summary('清唱', { processed: false, job: job({ project_id: '清唱', stage: 'draft' }) }),
+        project: project([]),
+        media: { source: null, audio: null, vocals: null, instrumental: null },
+        exports: [],
+      }),
+    })
+    window.history.pushState({}, '', '/new')
+    render(<App />)
+    await userEvent.upload(screen.getByTestId('media-input'), new File(['abc'], '清唱.mp3', { type: 'audio/mpeg' }))
+    await userEvent.click(screen.getByRole('radio', { name: '沒有歌詞,用 AI 辨識' }))
+    expect(screen.getByText(/只是草稿/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '開始處理' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/p/${encodeURIComponent('清唱')}`))
+    const upload = calls.find((call) => call.method === 'POST')
+    expect(upload?.body).not.toHaveProperty('lyrics')
+    expect(await screen.findByText(/正在處理「清唱」/)).toBeInTheDocument()
+    // The drafting stage is part of the list and is the one running.
+    expect(screen.getAllByText('產生歌詞草稿')).toHaveLength(2)
+    expect(document.querySelector('.stages .active')).toHaveTextContent('產生歌詞草稿')
   })
 
   it('asks for a media file first', async () => {

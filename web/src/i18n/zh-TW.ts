@@ -76,6 +76,7 @@ export const zhTW = {
   'job.stage.separate': '分離人聲與伴奏',
   'job.stage.analyze': '分析人聲',
   'job.stage.asr': '語音辨識',
+  'job.stage.draft': '產生歌詞草稿',
   'job.stage.align': '對齊歌詞',
   'job.stage.pitch': '分析音高',
   'job.stage.subtitles': '排版字幕',
@@ -119,6 +120,9 @@ export const zhTW = {
   'editor.saving': '儲存中…',
   'editor.unsaved': '尚未儲存',
   'editor.saveFailed': '儲存失敗',
+  'editor.draft':
+    '這份歌詞是語音辨識產生的草稿,可能有錯字或漏字。請邊聽邊校對(雙擊一行就能修改文字),改完後按「重新對齊」。',
+  'editor.draft.dismiss': '知道了',
   'editor.conflict': '專案已在別處被修改。為了避免覆蓋,這裡的修改沒有儲存。',
   'editor.conflict.reload': '重新載入(放棄這裡未儲存的修改)',
   'editor.locked.job': '背景工作執行中,暫時不能編輯。',

@@ -163,7 +163,10 @@ def test_default_singers() -> None:
 
 
 def test_spec_example_round_trips_unchanged() -> None:
-    """The example document from SPEC §4.2 loads and dumps back to exactly the same JSON."""
+    """The example document from SPEC §4.2 loads and dumps back to the same JSON.
+
+    The only difference is what later schema versions added, at its default value.
+    """
     document: dict[str, object] = {
         "schema_version": 1,
         "revision": 42,
@@ -216,5 +219,6 @@ def test_spec_example_round_trips_unchanged() -> None:
     }
     project = Project.model_validate(document)
     dumped = project.model_dump(mode="json", exclude_none=True)
-    assert dumped == document
     assert Project.model_validate(dumped) == project
+    assert dumped["meta"].pop("lyrics_source") == "user"  # added in schema version 3
+    assert dumped == document

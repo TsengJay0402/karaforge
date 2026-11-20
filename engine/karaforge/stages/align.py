@@ -93,7 +93,7 @@ class AlignStage(Stage):
 
     name: ClassVar[str] = "align"
     version: ClassVar[str] = ALIGN_ALGORITHM_VERSION
-    requires: ClassVar[tuple[str, ...]] = ("analyze", "asr")
+    requires: ClassVar[tuple[str, ...]] = ("analyze", "asr", "draft")
     weight: ClassVar[float] = 3.0
     cache_keep: ClassVar[int] = 12
     title_zh: ClassVar[str] = "對齊歌詞"

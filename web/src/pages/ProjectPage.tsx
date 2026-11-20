@@ -11,6 +11,8 @@ import { Editor } from '../editor/Editor.tsx'
 import { type MessageKey, useT } from '../i18n/index.ts'
 
 const STAGES = ['ingest', 'separate', 'analyze', 'asr', 'align'] as const
+/** A project without lyrics gets them drafted from the recognition before the alignment. */
+const STAGES_WITH_DRAFT = ['ingest', 'separate', 'analyze', 'asr', 'draft', 'align'] as const
 
 /** Shown while a project is being processed, or before it has been. */
 function Processing({ detail, onChanged }: { detail: ProjectDetail; onChanged: () => void }) {
@@ -34,14 +36,16 @@ function Processing({ detail, onChanged }: { detail: ProjectDetail; onChanged: (
     }
   }
 
-  const stageIndex = job?.stage ? STAGES.indexOf(job.stage as (typeof STAGES)[number]) : -1
+  const drafting = detail.project.lines.length === 0 || detail.project.meta.lyrics_source === 'asr'
+  const stages: readonly string[] = drafting ? STAGES_WITH_DRAFT : STAGES
+  const stageIndex = job?.stage ? stages.indexOf(job.stage) : -1
   return (
     <main className="processing">
       <h1>{job ? t('job.processing.title', { title: detail.summary.title }) : detail.summary.title}</h1>
       {job ? (
         <>
           <ol className="stages">
-            {STAGES.map((stage, index) => (
+            {stages.map((stage, index) => (
               <li
                 key={stage}
                 className={index < stageIndex ? 'done' : index === stageIndex ? 'active' : undefined}

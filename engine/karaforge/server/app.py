@@ -323,6 +323,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
         parsed.apply_meta(project.meta)
         project.singers = parsed.singers
         project.lines = parsed.lines
+        project.meta.lyrics_source = "user"
         store.save(project, expected_revision=body.revision)
         _project_changed(project_id, "saved")
         return {

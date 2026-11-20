@@ -32,6 +32,8 @@ export interface Meta {
   composer: string
   language: string
   duration_ms: number
+  /** `asr` when the lyrics are a draft made by speech recognition. */
+  lyrics_source: 'user' | 'asr'
 }
 
 export interface Media {

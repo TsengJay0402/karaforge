@@ -1,10 +1,12 @@
-"""Pydantic models for ``project.json`` (schema version 2).
+"""Pydantic models for ``project.json`` (schema version 3).
 
 Version history:
 
 * **1** — the format of the original specification.
 * **2** — lines can carry a ``time_hint`` (the line-level time of an imported LRC / SRT / ASS
   file) and tokens can have ``source = "import"`` (word-level timing that came from a file).
+* **3** — ``meta.lyrics_source`` records whether the lyrics were given by the user or drafted
+  by speech recognition.
 
 Conventions (see ``docs/project-format.md``):
 
@@ -20,9 +22,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 TokenSource = Literal["auto", "manual", "import"]
+LyricsSource = Literal["user", "asr"]
 RubySource = Literal["auto", "manual"]
 BackgroundType = Literal["video", "image", "color", "blur"]
 
@@ -145,6 +148,8 @@ class Meta(_Model):
     composer: str = ""
     language: str = "zh-TW"
     duration_ms: int = Field(default=0, ge=0)
+    lyrics_source: LyricsSource = "user"
+    """``asr`` when the lyrics are a draft made by speech recognition (see ``stages/draft``)."""
 
 
 class Media(_Model):
