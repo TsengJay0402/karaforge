@@ -69,7 +69,7 @@ KaraForge 尋找 ffmpeg 的順序是：環境變數 `KARAFORGE_FFMPEG`／`KARAFO
   不執行 `docker system prune` 之類會清掉其他專案資料的全域清理。
 - **模型與工具存放位置**：使用預設的 `KARAFORGE_HOME`（`~/.local/share/karaforge`）。
 - **git**：作者資訊只在 repo 層級設定，未動全域設定；
-  只在本機 commit，不 push。
+  開發期間只在本機 commit；公開前改寫過一次歷史（見 REPORT.md 第 7 節「關於 commit 編號」）。
 
 ## 因為環境而無法實測的項目（會如實列入 REPORT.md）
 

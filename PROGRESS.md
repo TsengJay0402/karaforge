@@ -31,12 +31,12 @@
 
 驗收標準：依 README 從零安裝可以跑通；REPORT.md 完成。
 
-- **從零安裝**（做了兩次，第二次在 commit `48c1dae`）：全新 clone → `uv sync --extra cpu` → 啟用虛擬環境 → 建置前端 →
+- **從零安裝**（做了兩次，第二次在 commit `0704575`）：全新 clone → `uv sync --extra cpu` → 啟用虛擬環境 → 建置前端 →
   `kf doctor`（空的資料目錄）→ `kf models download --profile cpu-lite`（2 分 6 秒）→ `kf auto`（59 秒，產出 720p MP4）→
   `kf serve`（健康檢查、網頁、專案列表）。全部成功。
   第一次發現 README 原本寫的 `uv run kf …` 會把 CPU 版 PyTorch 換成 CUDA 版，已改成先啟用虛擬環境。
 - **Docker（CPU）**：第一次建置失敗（`diffq` 需要 C 編譯器）。先加編譯器讓它過，之後發現 `diffq` 是非商業授權而且根本用不到，
-  改成排除，編譯器也拿掉。最後的映像（3.65 GB，commit `48c1dae`）：容器內 `kf doctor`、`kf models download --profile cpu-lite`（全新 volume）、
+  改成排除，編譯器也拿掉。最後的映像（3.65 GB，commit `0704575`）：容器內 `kf doctor`、`kf models download --profile cpu-lite`（全新 volume）、
   `kf auto`（非預設使用者 id、bind mount，52 秒）；`docker compose up` 後健康檢查、網頁、專案列表與字幕算繪器的檔案正常。hadolint 通過。
   同時修正了 compose 的專案資料夾路徑與使用者 id 的問題。
 - **Docker（CUDA）**：建置成功（13 GB），在沒有 GPU 的機器上可以啟動並退回 CPU；沒有在有 GPU 的機器上執行過。驗證後映像已刪除。
@@ -148,7 +148,7 @@
 
 ### 2026-11-21
 
-- M2：CTC／Qwen／hybrid 對齊器與評測工具在 commit `ac5bfce` 凍結，test 分組完整評測；評測揭露錨點處理的缺陷，
+- M2：CTC／Qwen／hybrid 對齊器與評測工具在 commit `f56d855` 凍結，test 分組完整評測；評測揭露錨點處理的缺陷，
   在 dev 上修正（演算法第 8 版）後重測。ADR 0006–0008、0011。
 - M3 收尾：MKV 雙音軌、LRC／SRT／ASS／UltraStar 的匯入匯出、專案格式第 2 版。
 - M4：FastAPI 伺服器、工作佇列、SSE；前端全部頁面與編輯器（canvas 時間軸、JASSUB 預覽、主題面板）；
@@ -156,6 +156,8 @@
 - M5：`kf doctor`、`kf align`、`kf batch`；無歌詞流程（`draft` 階段、專案格式第 3 版）；注音／拼音與破音字測試集。ADR 0010。
 - M6：文件、範例、Docker 映像實際建置與執行、依 README 從零安裝、Python 3.11 測試、全形標點、相依套件授權的掃描與排除（ADR 0012）、
   v0.1.0、REPORT.md。
+- 公開到 GitHub 前改寫 git 歷史：作者 email 改為 noreply，文件中與開發機有關的個人化描述改成中性的說法。
+  commit 編號全部改變，原始評測報告裡的舊編號對照見 REPORT.md 第 7 節。
 - 外包給 GLM 的單元測試：`batch`、`doctor`、繁簡轉換、歌詞草稿四個檔案，逐檔審閱並執行；`doctor` 的測試有一個錯誤的 import 與一個錯誤的預期值。
 - 只有實際執行才發現的問題（都已修正）：Docker 建置失敗進而揭露的授權問題、`uv lock` 因為無法建置的 `diffq-fixed` 而失敗、
   `uv run` 會換掉 PyTorch、compose 的路徑與使用者 id、CUDA 映像上 `kf doctor` 的錯誤提示、

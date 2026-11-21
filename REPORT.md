@@ -138,7 +138,7 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 
 ### 2.6 破音字（注音／拼音）
 
-測試集：171 句、68 個破音字，在撰寫讀音引擎之前寫好並提交（commit `677c8b7`），之後沒有改過。
+測試集：171 句、68 個破音字，在撰寫讀音引擎之前寫好並提交（commit `3c20f49`），之後沒有改過。
 
 | 方法 | 正確 | 準確率 |
 |---|---:|---:|
@@ -176,9 +176,9 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 | `kf bench`：test 分組完整矩陣（120 × 12）、第 8 版重測（120 × 4）、dev 分組錨點實驗（新舊各一次） | 完成，報告與原始資料在 `bench/reports/` |
 | 破音字量測（`scripts/eval_polyphones.py`） | 見 2.6 |
 | 模型下載：註冊表的 11 個模型都透過 `kf models download` 下載並通過 SHA-256 驗證 | 完成 |
-| **Docker（CPU）**：`docker build`、hadolint；容器內 `kf doctor`、`kf models download --profile cpu-lite`（全新 volume）、`kf auto`（非預設使用者 id、bind mount，52 秒）；`docker compose up` 後的健康檢查、網頁、專案列表、字幕算繪器的檔案 | 全部成功（映像 3.65 GB）。最後一次是在 commit `48c1dae` 上重新建置後整套重做；映像裡沒有被排除的套件，建置階段不需要編譯器。那之後的 commit 只動了文件、量測腳本、測試與型別檢查的設定 |
+| **Docker（CPU）**：`docker build`、hadolint；容器內 `kf doctor`、`kf models download --profile cpu-lite`（全新 volume）、`kf auto`（非預設使用者 id、bind mount，52 秒）；`docker compose up` 後的健康檢查、網頁、專案列表、字幕算繪器的檔案 | 全部成功（映像 3.65 GB）。最後一次是在 commit `0704575` 上重新建置後整套重做；映像裡沒有被排除的套件，建置階段不需要編譯器。那之後的 commit 只動了文件、量測腳本、測試與型別檢查的設定 |
 | Docker（CUDA）：`docker build --build-arg VARIANT=cuda`，容器內 `kf --version`、`kf doctor` | 建置成功（13 GB）；在沒有 GPU 的機器上正確退回 CPU。GPU 推論沒有驗證（見 3.2） |
-| **依 README 從零安裝**：全新 clone → `uv sync --extra cpu` → 建置前端 → `kf doctor`（空的資料目錄）→ `kf models download --profile cpu-lite` → `kf auto` → `kf serve` | 成功。做了兩次：第一次找到下面列的問題，修正後在 commit `48c1dae` 上從頭再做一次（下載模型 2 分 6 秒、`kf auto` 59 秒） |
+| **依 README 從零安裝**：全新 clone → `uv sync --extra cpu` → 建置前端 → `kf doctor`（空的資料目錄）→ `kf models download --profile cpu-lite` → `kf auto` → `kf serve` | 成功。做了兩次：第一次找到下面列的問題，修正後在 commit `0704575` 上從頭再做一次（下載模型 2 分 6 秒、`kf auto` 59 秒） |
 | 相依套件授權掃描（`scripts/scan_licenses.py`；全新 clone 的核心環境、開發環境、Docker 映像）與前端正式相依的授權（`npm ls --omit=dev --all`） | 核心環境 114 個套件，只有 `soxr`（LGPL）不是寬鬆授權；被排除的三個套件都不在安裝結果與打包結果裡。細節見第 7 節 |
 | 示範檔案（`examples/demo/`）以 `balanced` 全自動產生 | 43 個字，中位數 12 ms、最大 114 ms |
 | `kf batch` 真實執行（兩首有歌詞、一首沒有） | 兩首完成、一首略過，報告正確 |
@@ -208,7 +208,7 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 
 | 項目 | 原因 | 目前的狀態 |
 |---|---|---|
-| GitHub Actions | 這個儲存庫沒有推送到任何遠端 | workflow 寫好了，裡面的指令都在本機個別執行過，但 workflow 本身**從未執行**，可能有設定錯誤 |
+| GitHub Actions | 撰寫本報告時，儲存庫還沒有推送到 GitHub | workflow 寫好了，裡面的指令都在本機個別執行過，但 workflow 本身**從未執行**，可能有設定錯誤 |
 | CUDA／GPU 推論 | 開發機沒有 GPU | 程式會自動偵測並在失敗時退回 CPU；GPU 路徑沒有執行過 |
 | CUDA 映像在有 GPU 的機器上執行、compose 的 `gpu` profile | 開發機沒有 GPU | 映像建置成功（13 GB）並能在 CPU 上啟動；GPU 推論未驗證 |
 | Apple MPS、macOS | 沒有機器 | 未驗證 |
@@ -280,10 +280,10 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 | Python 測試（`tests/` 底下所有 `.py`） | 11,049 行、52 個檔案、805 個測試 |
 | 前端（`web/src`，TypeScript／CSS，不含測試） | 6,266 行、31 個檔案 |
 | 前端測試 | 單元 1,344 行、70 個測試；端對端 672 行、15 個測試（另有 1 個擷取畫面用的腳本） |
-| 文件（Markdown，不含規格書，含本報告） | 5,932 行、41 個檔案，其中 ADR 12 篇 |
+| 文件（Markdown，不含規格書，含本報告） | 5,936 行、41 個檔案，其中 ADR 12 篇 |
 | 引擎測試覆蓋率 | 93%（陳述式與分支；`pytest --cov`，含真實模型的整合測試） |
-| git 歷史 | 20 個 commit（2026-11-19 至 11-21），標籤 `v0.1.0`；沒有推送到任何遠端 |
-| CI 狀態 | workflow 已撰寫（lint、型別、單元測試 ×Python 3.11／3.12、整合測試、前端、Playwright、Docker），**從未在 GitHub 上執行** |
+| git 歷史 | 21 個 commit（2026-11-19 至 11-21），標籤 `v0.1.0`；公開前改寫過一次（見第 7 節「關於 commit 編號」） |
+| CI 狀態 | workflow 已撰寫（lint、型別、單元測試 ×Python 3.11／3.12、整合測試、前端、Playwright、Docker），**撰寫本報告時還沒有在 GitHub 上執行過** |
 
 行數以 `git ls-files` 列出的檔案計算，含空行與註解。
 
@@ -348,8 +348,8 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
   沒有 `diffq` 的完整流程與 5 個真實模型整合測試；沒有 `soynlp` 的 `gpu-quality` 流程（結果與裝著它時逐字相同）與韓文歌詞的直接呼叫；
   沒有 `rvfc-polyfill` 的 14 個瀏覽器測試與真實模型完整流程。
 - 這不是有計畫的稽核找到的，是 Docker 建置失敗之後追出來的。開發機剛好有 C 編譯器，`diffq` 才能從 M1 一路安靜地裝到最後。
-- git 歷史裡 `48c1dae` 之前的每一個 commit，照它的 lock 檔安裝或打包，都會含有這些套件；今天稍早建置的 Docker 映像（已重建）也是。
-  儲存庫沒有推送或發布過，所以沒有散布出去。
+- git 歷史裡 `0704575` 之前的每一個 commit，照它的 lock 檔安裝或打包，都會含有這些套件；開發期間建置的 Docker 映像也是（都已重建或刪除）。
+  儲存庫是修正之後才公開的；歷史裡的 lock 檔只列出套件名稱，打包好的前端與映像從來沒有放進儲存庫，所以這些程式碼沒有被散布過。
 - 現在的防線：`scripts/scan_licenses.py` 掃描整個環境，對應的單元測試在出現沒有交代過的 GPL／非商業授權套件、或被排除的套件又被裝回來時失敗；
   前端由建置本身檢查。
 - **仍然存在的例外**，需要你知道：
@@ -374,25 +374,24 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 
 架構、演算法、跨模組修改、除錯都沒有外包。
 
-### 開發環境與在儲存庫以外留下的東西
+### 開發環境
 
 - 開發機沒有安裝系統 ffmpeg，我也不想為此改動系統。一開始嘗試下載靜態編譯的 ffmpeg，**被 AI 開發工具的權限機制擋下**；
   沒有繞過它，改用 Docker 包一層 Debian 的 ffmpeg（ADR 0002）。所有匯出與視覺測試用的都是這一份。
-- 在儲存庫以外建立的東西：
-  - `~/.local/share/karaforge/`（8.6 GB）：下載的模型與 ffmpeg 的包裝腳本。其中 `mms-fa`（CC-BY-NC）是為了評測而以 `--accept-license` 下載的。
-  - `~/.local/bin/uv`（M0 時以官方安裝腳本安裝）。
-  - Docker 映像 `karaforge-ffmpeg:trixie`（745 MB，匯出與測試都要用到它）與 `karaforge:cpu`（3.65 GB）。
-    CUDA 映像（13 GB）建置並檢查之後已經刪除；檢查 Dockerfile 用的 `hadolint` 映像也刪除了。
-  - 今天的建置在 Docker build cache 裡留下約 54 GB，其中已經被取代的 45.8 GB
-    （CUDA 與先前幾次 CPU 建置）已經依 id 逐筆刪除，沒有用會一併清掉其他快取的 `docker system prune`。
-    最後一次建置的快取（約 8 GB）還在，重建映像時會用到。
-  - 測試時建立的容器、volume、網路與暫存資料夾都已移除。
-- 儲存庫資料夾裡沒有進版控的大型資料：`bench/_runs/`（8.2 GB，評測用的合成歌曲與各階段快取；可以重新產生，但要好幾個小時，所以留著）、
-  `.venv/`（2.6 GB）、`web/node_modules/`（202 MB）、`.tmp/`（142 MB，開發過程中的除錯腳本與輸出，以及組出這份報告的原稿）、
-  `.tools/`（不到 1 MB，評測、調校與建置的紀錄檔）。
-- 收尾時刪除的東西：當初被擋下、從未解壓的 ffmpeg 壓縮檔（146 MB）、M2 試裝 Qwen 用的另一個虛擬環境、
-  測試留下的暫存輸出（`.pytest_tmp/` 的內容）、為了「從零安裝」而建立的兩份暫時的 clone。
-- 沒有推送到任何遠端，沒有對外傳送專案內容。
+- 機器規格與其他環境細節在 [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)。
+
+### 關於 commit 編號
+
+公開之前改寫過一次 git 歷史：作者 email 改成 GitHub 的 noreply 地址，文件裡幾句與開發機有關的個人化描述改成中性的說法。
+程式碼與其他內容沒有改變，但所有 commit 的編號都變了。文件中引用的編號已經更新；
+`kf bench` 的原始報告（`bench/reports/`、`docs/benchmark-report*.md` 與本報告的附錄）是原樣保留的工具輸出，裡面記錄的是改寫前的編號：
+
+| 報告裡的編號（改寫前） | 現在的編號 | 是哪一個 commit |
+|---|---|---|
+| `ac5bfce` | `f56d855` | M2：對齊器與評測工具凍結（附錄 A 那次評測所用的程式） |
+| `376ecb5` | `f1585cf` | 附錄 A 的報告裡寫的 commit（產生報告時才讀取版本，見附錄 A 的說明） |
+| `3dd0d6a` | `b7963bf` | `bench/reports/dev-anchors/` 的兩份 dev 分組錨點報告 |
+| `8f43048` | `0ce6cbf` | 演算法第 8 版（附錄 B） |
 
 ### 這份報告本身的限制
 
@@ -404,8 +403,9 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 
 ## 附錄 A：`kf bench` 原始報告——完整矩陣（演算法第 7 版）
 
-以下是 `bench/reports/test-v1/report.md` 的全文（標題降兩級，其餘一字未改）。這次執行在 commit `ac5bfce` 的程式上進行；
-報告裡的 commit 欄位寫 `376ecb5`，是因為當時的工具在產生報告時才讀取版本（之後已改成在開始時記錄）。
+以下是 `bench/reports/test-v1/report.md` 的全文（標題降兩級，其餘一字未改）。這次執行在 commit `f56d855` 的程式上進行；
+報告裡的 commit 欄位寫 `376ecb5`，是因為當時的工具在產生報告時才讀取版本（之後已改成在開始時記錄），
+而且那是公開前改寫歷史以前的編號（對應現在的 `f1585cf`，見第 7 節「關於 commit 編號」）。
 沒有錨點的各列對目前的程式（第 8 版）仍然成立；有錨點的各列是第 7 版的行為。
 
 ### KaraForge 合成測資評測(test,產生器 v1)
@@ -811,7 +811,7 @@ test 分組：中文、英文、中英混合各 10 首（每首 48–89 秒）×
 
 ## 附錄 B：`kf bench` 原始報告——主要設定與錨點實驗（演算法第 8 版）
 
-以下是 `bench/reports/test-v2/report.md` 的全文（標題降兩級，其餘一字未改），commit `8f43048`。
+以下是 `bench/reports/test-v2/report.md` 的全文（標題降兩級，其餘一字未改），commit `0ce6cbf`（報告裡寫的是改寫歷史以前的編號 `8f43048`）。
 `(v7 handling)` 那幾列是用相同的錨點、以第 7 版的方式處理的對照組。
 
 ### KaraForge 合成測資評測(test,產生器 v1)

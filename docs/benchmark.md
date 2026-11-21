@@ -6,10 +6,12 @@ KaraForge 的核心價值是「自動對齊有多準」，所以這份評測是�
 
 | 報告 | 內容 | 演算法版本 |
 |---|---|---|
-| [`benchmark-report.md`](benchmark-report.md) | 完整矩陣：主要設定、消融實驗、錨點實驗、五種對齊器的比較（120 個音檔 × 12 種設定） | 7（commit `ac5bfce`） |
-| [`benchmark-report-anchors.md`](benchmark-report-anchors.md) | 主要設定與錨點實驗（新、舊兩種錨點處理方式並列，外加「同一批字鎖定前後」的配對表） | 8（commit `8f43048`） |
+| [`benchmark-report.md`](benchmark-report.md) | 完整矩陣：主要設定、消融實驗、錨點實驗、五種對齊器的比較（120 個音檔 × 12 種設定） | 7（commit `f56d855`） |
+| [`benchmark-report-anchors.md`](benchmark-report-anchors.md) | 主要設定與錨點實驗（新、舊兩種錨點處理方式並列，外加「同一批字鎖定前後」的配對表） | 8（commit `0ce6cbf`） |
 
 兩份報告的機器可讀版本與每個 token 的預測值在 [`bench/reports/`](../bench/reports/)。
+報告裡記錄的 commit 是公開前改寫 git 歷史以前的編號：`376ecb5`＝現在的 `f1585cf`、`8f43048`＝`0ce6cbf`、`3dd0d6a`＝`b7963bf`
+（見 [REPORT.md](../REPORT.md) 第 7 節「關於 commit 編號」）。
 第 8 版只改了「有鎖定字時」的行為：沒有錨點的設定在兩次執行中每一個 token 的時間都完全相同（已逐一比對 120 個音檔），
 所以第一份報告裡沒有錨點的數字對目前的程式仍然成立。
 
