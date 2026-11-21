@@ -65,7 +65,7 @@ Read these numbers as an **upper bound**. Plainly:
 - **`cpu-lite` (the smallest model set) is much worse**: its aligner leaves about a fifth of
   the tokens needing a fix on the same data.
 - **Lyric drafts from speech recognition are mostly wrong**: on the one example we measured, the
-  best model got half of the characters right. If you have the lyrics, use them.
+  best profile got half of the characters right. If you have the lyrics, use them.
 - Developed on a machine without a GPU: **CUDA, Apple MPS, macOS and Windows are untested.**
 
 ## Installation

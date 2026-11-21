@@ -71,7 +71,7 @@ class URLSource:
     license_url: str
     homepage: str
     revision: str
-    files: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict[str, str])
     commercial_use: bool = True
     directory: str | None = None
     note_zh: str = ""
@@ -264,7 +264,7 @@ def build_hf(
         tree = client.get(
             f"{HF_API}/{source.repo}/tree/{revision}", params={"recursive": "true"}
         ).json()
-        files = []
+        files: list[dict[str, Any]] = []
         for item in tree:
             path = item["path"]
             if item["type"] != "file" or path in SKIP_FILES or path.endswith(SKIP_SUFFIXES):
@@ -302,7 +302,7 @@ def build_url(
 ) -> dict[str, Any]:
     """Build the registry entry of a set of plain URLs."""
     known = {file["url"]: file for file in previous["files"]} if previous else {}
-    files = []
+    files: list[dict[str, Any]] = []
     for path, url in source.files.items():
         if url in known:
             files.append(known[url])
@@ -335,7 +335,7 @@ def main() -> None:
             entry["id"]: entry
             for entry in json.loads(REGISTRY.read_text(encoding="utf-8"))["models"]
         }
-    entries = []
+    entries: list[dict[str, Any]] = []
     with httpx.Client(timeout=httpx.Timeout(30.0, read=300.0), follow_redirects=True) as client:
         for source in sources(client):
             print(source.id, file=sys.stderr)

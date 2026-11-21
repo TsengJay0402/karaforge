@@ -45,7 +45,7 @@
 
 1. **第一個做法（未採用）**：下載 BtbN 的靜態 ffmpeg 8.1 放進專案內的 `.tools/`。
    壓縮檔已下載，但解壓並執行這個外部執行檔的動作被 Claude Code 的權限分類器擋下，
-   因此**沒有解壓、沒有執行**。壓縮檔留在 `.tools/ffmpeg-dl/ffmpeg.tar.xz`（已被 git 忽略，可直接刪除）。
+   因此**沒有解壓、沒有執行**。壓縮檔原本留在 `.tools/ffmpeg-dl/`（被 git 忽略），已在 2026-11-21 收尾時刪除。
 2. **第二個做法（未採用）**：`sudo apt install ffmpeg`。我不想為了這個專案改動系統。
 3. **實際採用**：用 Debian 官方套件在 Docker 映像裡安裝 ffmpeg，再用一支小包裝程式把
    `ffmpeg`／`ffprobe` 轉成 `docker run`：

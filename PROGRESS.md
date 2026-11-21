@@ -1,37 +1,17 @@
 # KaraForge 開發進度
 
 > 依規格 §12 持續維護。最新狀態在最上面；每個里程碑的驗收結果記錄在對應段落。
+> 完整的總結（評測數據、驗證清單、已知限制）在 [`REPORT.md`](REPORT.md)。
 
-## 目前狀態（2026-11-21 04:40，工作因用量上限再次中斷時的實際狀態）
+## 目前狀態（2026-11-21，v0.1.0）
 
-**已完成並實際驗證過**
+全部里程碑的工作已經結束：M0–M5 完成，M6 大部分完成。剩下沒有做到的事都列在 `REPORT.md` 第 1 節與第 3.2 節，最重要的幾項：
 
-- **M2**：test 分組完整評測（120 個音檔 × 12 種設定）跑完。規格 §10.4 四項目標全部達成（中文 10 dB：中位數 11 ms、P95 86 ms、
-  需修正 2.8%、鎖定 5% 隨機錨點後 3.0%）。評測同時揭露「錨點反而讓其餘的字變差」的缺陷，已在 dev 上找出原因並修正（演算法第 8 版），
-  再於 test 上重測；完整經過與所有不好看的數字都寫在 `docs/benchmark.md`。原始報告：`docs/benchmark-report.md`（第 7 版、完整矩陣）、
-  `docs/benchmark-report-anchors.md`（第 8 版、錨點），原始資料在 `bench/reports/`。
-- **M3**：排版、ASS、MKV 雙音軌、各種匯入匯出（先前已完成）；單元 755、整合與視覺 37 個測試在本次修改後重新執行通過。
-- **M4**：Web App 完成。Vitest 69 個通過；Playwright 14 個（不含需要模型的那一個）在 03:24 通過，包含預覽對匯出的影格比對。
-- **M5**：`kf doctor`、`kf align --respect-locked`、`kf batch`、無歌詞流程（真實模型的整合測試 3 個通過；草稿的字元錯誤率如實量測：
-  `cpu-lite` 83.7%，最好的模型約 49%）、注音／拼音（破音字測試集 171 句，準確率 92.4%，未經調整的基準 88.3%，見 `docs/ruby.md`）。
-- **文件**：README（中、英）、cli、lyrics-format、project-format、themes、profiles、architecture、adapters、ruby、LICENSES、
-  alignment、benchmark、ADR 0001–0009、CHANGELOG（草稿）。
-
-**寫好了但還沒有執行或驗證（不要當成已完成）**
-
-- 03:24 之後的修改（換段規則、介面標點、讀音面板以外的調整、無提示辨識的設定）之後，**Playwright 沒有重跑**。
-- `web/e2e/process.spec.ts`（真實模型：上傳 → 處理 → 拖曳 → 重新對齊 → 匯出 → 檢查檔案，規格 §11 要求的那一條）**從來沒有執行過**。
-  執行方式：`cd web && KARAFORGE_E2E_MODELS=1 npm run e2e -- process`。
-- `docker/Dockerfile` 與 `docker/docker-compose.yml`：hadolint 通過、`docker compose config` 通過，**映像沒有建置過**（CPU 與 CUDA 都沒有）。
-- CI workflow 沒有在 GitHub 上跑過；Python 3.11 沒有實際跑過測試。
-
-**還沒做**
-
-- `REPORT.md`（最終報告）。
-- `examples/`（示範專案、MP4、MKV）與 README 用的影片截圖。
-- 版號改成 0.1.0 並打 tag；依 README 從零安裝的實測；覆蓋率與程式碼行數的統計。
-- 引擎訊息（CLI／伺服器）的全形標點整理：腳本在 `.tmp/fullwidth_py.py`（未套用；需要略過三引號字串並處理一個 LRC 格式說明的特例）。
-- 硬體編碼器選項沒有開放成設定；分離階段的細部進度沒有做。
+- 所有準確度數字都來自合成歌聲；真實歌曲沒有量過。
+- GPU（CUDA、MPS）、macOS、Windows、硬體編碼沒有實測；CI workflow 從未在 GitHub 上執行。
+- 錨點重對齊在修正後不再有害，但幫助有限。
+- 沒有做系統性的效能調校與錯誤情境稽核。
+- 授權：預設安裝與打包的前端原本含有非商業授權與 GPL 的間接相依，M6 最後才發現並排除；排除對 `pip install` 無效（ADR 0012）。
 
 ## 里程碑
 
@@ -39,13 +19,75 @@
 |---|---|---|
 | M0 骨架 | 完成 | |
 | M1 引擎核心 | 完成 | |
-| M2 對齊品質 | 完成 | 目標達成；錨點的效果有限，如實記錄 |
+| M2 對齊品質 | 完成 | §10.4 四項目標達成；錨點的缺陷與修正見下方 |
 | M3 KTV 排版與輸出 | 完成 | |
-| M4 Web App | 大致完成 | 需要模型的端對端測試尚未執行；最新修改後 Playwright 未重跑 |
-| M5 進階功能 | 完成 | 各功能有測試；準確率如實報告 |
-| M6 打磨與發佈 | 未完成 | 文件完成；Docker 建置、示範影片、REPORT.md、版號、從零安裝驗證未做 |
+| M4 Web App | 完成 | Playwright 14 個加真實模型完整流程 1 個通過 |
+| M5 進階功能 | 完成 | 破音字準確率、草稿錯誤率如實報告 |
+| M6 打磨與發佈 | 大部分完成 | Docker CPU 映像實測、文件、示範、從零安裝實測、授權掃描與排除、v0.1.0；效能調校與錯誤稽核沒有系統性地做 |
 
 ## 驗收紀錄
+
+### M6（2026-11-21）
+
+驗收標準：依 README 從零安裝可以跑通；REPORT.md 完成。
+
+- **從零安裝**（做了兩次，第二次在 commit `48c1dae`）：全新 clone → `uv sync --extra cpu` → 啟用虛擬環境 → 建置前端 →
+  `kf doctor`（空的資料目錄）→ `kf models download --profile cpu-lite`（2 分 6 秒）→ `kf auto`（59 秒，產出 720p MP4）→
+  `kf serve`（健康檢查、網頁、專案列表）。全部成功。
+  第一次發現 README 原本寫的 `uv run kf …` 會把 CPU 版 PyTorch 換成 CUDA 版，已改成先啟用虛擬環境。
+- **Docker（CPU）**：第一次建置失敗（`diffq` 需要 C 編譯器）。先加編譯器讓它過，之後發現 `diffq` 是非商業授權而且根本用不到，
+  改成排除，編譯器也拿掉。最後的映像（3.65 GB，commit `48c1dae`）：容器內 `kf doctor`、`kf models download --profile cpu-lite`（全新 volume）、
+  `kf auto`（非預設使用者 id、bind mount，52 秒）；`docker compose up` 後健康檢查、網頁、專案列表與字幕算繪器的檔案正常。hadolint 通過。
+  同時修正了 compose 的專案資料夾路徑與使用者 id 的問題。
+- **Docker（CUDA）**：建置成功（13 GB），在沒有 GPU 的機器上可以啟動並退回 CPU；沒有在有 GPU 的機器上執行過。驗證後映像已刪除。
+- **授權**：掃描整個環境後排除三個用不到的間接相依——`diffq`（CC-BY-NC）、`soynlp`（GPL-3.0）、前端的 `rvfc-polyfill`（GPL-3.0）；
+  每一個都在移除後實際跑過相關流程。新增 `scripts/scan_licenses.py` 與對應的單元測試、前端的建置檢查。經過與剩下的例外在 `REPORT.md` 第 7 節與 ADR 0012。
+- **全新 clone 上的測試**（`v0.1.0` 的內容）：Python 3.12.3 與 3.11.18 都是 795 通過、2 略過（需要評測工具）、8 個需要模型的未選取。
+- **完整測試**：`pytest --cov` 805 通過，引擎覆蓋率 93%；Vitest 70；Playwright 14 + 真實模型完整流程 1。
+- 示範歌曲、長歌與草稿錯誤率這幾個一次性的量測改成可以重做：`scripts/compare_with_truth.py`、`scripts/join_songs.py`（附測試，
+  其中一個測試直接核對 `examples/README.md` 引用的數字）。草稿錯誤率因此以完整流程重量，文件已更新。
+- `gpu-quality` 設定檔在 CPU 上完整跑過（示範歌曲：中位數 13 ms、最大 141 ms）。
+- 示範檔案在 `examples/demo/`；文件完成；`REPORT.md` 完成；版號 0.1.0，標籤 `v0.1.0`。
+
+### M5（2026-11-21）
+
+驗收標準：各功能都有測試；破音字準確率如實報告。
+
+- `kf doctor`、`kf align --respect-locked`、`kf batch`：單元測試加上真實執行（`kf batch` 兩首完成、一首略過）。
+- 無歌詞流程：`draft` 階段、專案格式第 3 版。真實模型的整合測試 3 個通過。草稿的字元錯誤率（一首合成歌曲）：`cpu-lite` 83.7%；當時另外直接執行辨識器量到 small 53.5%、large-v3-turbo 48.8%，
+  發佈前改成以完整流程重量，`balanced` 51.2%、`gpu-quality` 60.5%（文件採用這一組）。
+- 注音／拼音：破音字測試集 171 句（先於引擎提交），準確率 92.4%（158/171），未加自訂規則的基準 88.3%；讀錯的 13 題沒有針對性修改。
+- UltraStar 音高、模型管理（`kf models list|download|verify`，11 個模型全部通過檢查碼驗證）。
+
+### M4（2026-11-21）
+
+驗收標準：Playwright 端對端測試通過；預覽與匯出畫面一致。
+
+- Playwright（Chromium，對真正的伺服器）14 個測試通過，包含在實際播放中打點、時間軸拖曳、主題另存、讀音，以及
+  **預覽對匯出的影格比對**（同一時間點，已唱與未唱顏色的範圍相差 < 1% 畫面寬）。
+- 規格 §11 的完整流程（建立專案 → 處理 → 拖曳修改一個字 → 重新對齊 → 匯出 → 檢查輸出檔）以真實模型執行通過。
+  第一次執行時失敗，揭露兩個編輯器的問題（暫停時時間軸不會捲到選取的字；相鄰兩字交界處的拖曳對象不確定），都已修正。
+- 只在 Chromium 上驗證。
+
+### M3（2026-11-21）
+
+驗收標準：golden tests 與視覺迴歸測試通過；所有格式往返測試通過。
+
+- 排版引擎與 ASS 的 golden test、15 個視覺迴歸測試（算繪後抽樣像素，含外框）通過。
+- LRC、enhanced LRC、SRT、ASS、UltraStar 的往返測試通過（`tests/unit/test_formats.py`）。
+- MKV：軟字幕、伴唱與原唱兩條音軌（有標題與預設旗標）、內嵌字型，以 ffprobe 檢查；沒有在實體播放器上看過。
+- 後來補上的規則：歌詞換段時較短的停頓就清空畫面並倒數（每行都空一行的歌詞除外）。
+
+### M2（2026-11-21）
+
+驗收標準：評測報告產出；誠實比對第 10.4 節目標。
+
+- test 分組完整矩陣（120 個音檔 × 12 種設定）：`docs/benchmark-report.md`。目標格（`balanced`、中文、10 dB）：
+  中位數 11 ms、P95 86 ms、需修正 2.8%、鎖定 5% 隨機錨點後 4.2%（第 7 版）／3.0%（第 8 版）——四項都達成。
+- **評測揭露的缺陷**：第 7 版鎖定錨點後其餘的字變差（同一批字 6.5% → 7.7%）。凍結前沒有在 dev 上跑過錨點實驗，是流程上的疏漏。
+  只用 dev 分組找出原因並修正（演算法第 8 版，ADR 0011），重測為 6.5% → 6.1%；中文仍是持平到略差。重測報告：`docs/benchmark-report-anchors.md`。
+- 其他如實記錄的發現：預設對齊器不是最準的（非商業授權的 `ctc-mms` 較好）；「一行一個時間窗」對 CTC 沒有量到好處；
+  中英混合歌詞約一成需要修正；`whisper-attn` 約兩成。
 
 ### M1（2026-11-20）
 
@@ -97,8 +139,27 @@
 - `faster-whisper` 1.2.1 自己的檔案解碼與目前的 PyAV 不相容；本專案一律先自行解碼成 16 kHz 陣列再交給它，不受影響。
 - 分離階段的進度目前以 30 秒為一段回報（每段之間可以取消），段內沒有更細的進度。
 - 日文假名與韓文目前只有基本的羅馬拼音（供比對與對齊用），沒有經過評測。
+- `audio-separator` 在正規化重疊視窗時會印出一個 `RuntimeWarning: invalid value encountered in divide`（視窗邊緣的 0/0）。
+  那些樣本會被它自己裁掉；實際檢查過分離出來的音軌沒有非有限值，也沒有接縫處的爆音。
+- 授權上的排除（`diffq`、`soynlp`）只對 uv 有效；評測工具會安裝 GPL 套件（見 `docs/LICENSES.md`）。
+- `gpu-quality` 在同一首歌上有一次執行的結果與其他四次略有不同（當時機器負載很高），原因沒有查明。
 
 ## 工作紀錄
+
+### 2026-11-21
+
+- M2：CTC／Qwen／hybrid 對齊器與評測工具在 commit `ac5bfce` 凍結，test 分組完整評測；評測揭露錨點處理的缺陷，
+  在 dev 上修正（演算法第 8 版）後重測。ADR 0006–0008、0011。
+- M3 收尾：MKV 雙音軌、LRC／SRT／ASS／UltraStar 的匯入匯出、專案格式第 2 版。
+- M4：FastAPI 伺服器、工作佇列、SSE；前端全部頁面與編輯器（canvas 時間軸、JASSUB 預覽、主題面板）；
+  Vitest 與 Playwright 測試；預覽對匯出的影格比對。ADR 0009。
+- M5：`kf doctor`、`kf align`、`kf batch`；無歌詞流程（`draft` 階段、專案格式第 3 版）；注音／拼音與破音字測試集。ADR 0010。
+- M6：文件、範例、Docker 映像實際建置與執行、依 README 從零安裝、Python 3.11 測試、全形標點、相依套件授權的掃描與排除（ADR 0012）、
+  v0.1.0、REPORT.md。
+- 外包給 GLM 的單元測試：`batch`、`doctor`、繁簡轉換、歌詞草稿四個檔案，逐檔審閱並執行；`doctor` 的測試有一個錯誤的 import 與一個錯誤的預期值。
+- 只有實際執行才發現的問題（都已修正）：Docker 建置失敗進而揭露的授權問題、`uv lock` 因為無法建置的 `diffq-fixed` 而失敗、
+  `uv run` 會換掉 PyTorch、compose 的路徑與使用者 id、CUDA 映像上 `kf doctor` 的錯誤提示、
+  全新 clone 上兩個需要評測工具的測試、時間軸的兩個互動問題、Whisper 的無語音判斷吃掉前 30 秒。
 
 ### 2026-11-20
 

@@ -34,6 +34,10 @@ MKV 用 `pop-round` 而不是預設主題，是因為軟字幕要把字型嵌進
 這首歌有標準答案（`tests/fixtures/songs/zh-2000/truth.json`），所以可以直接量：
 43 個字的開始時間，誤差中位數 12 毫秒、最大 114 毫秒，沒有任何一個字超過 150 毫秒。
 
+```bash
+python scripts/compare_with_truth.py examples/demo/project.json tests/fixtures/songs/zh-2000/truth.json
+```
+
 **這是一個容易的例子**，請不要當成一般情況：合成的歌聲咬字清楚、伴奏單純、人聲比伴奏大聲。
 整體的評測數字（包含比較差的情況）在 [docs/benchmark.md](../docs/benchmark.md)。
 

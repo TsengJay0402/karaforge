@@ -210,7 +210,7 @@ known-first-party = ["karaforge", "kfbench", "support"]
 
 # ------------------------------------------------------------------------ pyright
 [tool.pyright]
-include = ["engine", "bench", "tests"]
+include = ["engine", "bench", "tests", "scripts"]
 exclude = ["**/__pycache__", "**/node_modules", ".venv", ".tools", "web"]
 extraPaths = ["engine", "bench", "tests"]
 venvPath = "."

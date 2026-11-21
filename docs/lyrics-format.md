@@ -89,14 +89,22 @@ LRC、enhanced LRC、SRT、ASS、UltraStar 匯出後再匯入，時間誤差不�
 **草稿一定要校對，而且要有心理準備它可能錯得很多。** 語音辨識對歌聲的錯誤率遠高於對說話。
 我們唯一量過的例子是測試用的那首合成歌曲（43 個字，10 dB；合成歌聲對辨識器來說特別難，真人演唱沒有量測過）：
 
-| 模型（設定檔） | 草稿的字元錯誤率 | 怎麼量的 |
-|---|---:|---|
-| Whisper base（`cpu-lite`） | 83.7%（43 個字錯 36 個） | 整合測試 `tests/integration/test_draft_flow.py` 的輸出 |
-| Whisper small（`balanced`） | 53.5% | 對同一段人聲直接執行辨識器一次 |
-| Whisper large-v3-turbo（`gpu-quality`） | 48.8% | 同上 |
+| 設定檔（辨識模型） | 草稿的字元錯誤率 |
+|---|---:|
+| `cpu-lite`（Whisper base） | 83.7%（43 個字錯 36 個） |
+| `balanced`（Whisper small） | 51.2%（錯 22 個） |
+| `gpu-quality`（Whisper large-v3-turbo） | 60.5%（錯 26 個） |
 
-也就是說，在這個例子裡**最好的模型也只對了一半**，最小的模型幾乎全錯——它產生的草稿只有「行數與位置大致正確」這個價值。
-如果手邊找得到歌詞，貼上歌詞永遠比用辨識的好；沒有歌詞時請用 `balanced` 以上的設定檔。
+量法：不給歌詞跑完整條流程，再把草稿與標準答案比較（每個設定檔各一次）：
+
+```bash
+kf auto examples/demo/song.mp3 -o draft.mp4 --profile balanced
+python scripts/compare_with_truth.py draft.kfproj tests/fixtures/songs/zh-2000/truth.json
+```
+
+也就是說，在這個例子裡**最好的設定檔也只對了一半**，最小的模型幾乎全錯——它產生的草稿只有「行數與位置大致正確」這個價值。
+比較大的模型在這裡並沒有比較好（`gpu-quality` 比 `balanced` 多錯 4 個字）；只有一首歌，不能推論出誰比較好，只能說都不可靠。
+如果手邊找得到歌詞，貼上歌詞永遠比用辨識的好；沒有歌詞時不要用 `cpu-lite`。
 
 編輯器會提醒這是草稿。改完文字後按「重新對齊」（或 `kf align`）即可，不需要重新辨識。
 專案一旦有了歌詞（不論是草稿還是你貼上的），就不會再被草稿覆蓋。

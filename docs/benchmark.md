@@ -205,6 +205,17 @@ test 分組，30 首歌 × 4 種訊噪比＝120 個音檔、7480 個 token。
 
 工作用的專案（含分離後的音軌與各階段快取）在 `bench/_runs/work/`，可以用 `kf serve` 打開來聽、來看對齊結果。
 
+### 只量一首歌
+
+合成歌曲都附有 `truth.json`（每個字真正的時間），所以任何一個處理過的專案都可以單獨拿來比，指標的定義與 `kf bench` 相同：
+
+```bash
+python scripts/compare_with_truth.py examples/demo/project.json tests/fixtures/songs/zh-2000/truth.json
+```
+
+它也會比較歌詞文字本身（字元錯誤率），用來看沒有歌詞時語音辨識草稿錯了多少。
+`scripts/join_songs.py` 可以把幾首合成歌曲接成一首正常長度的歌，連同歌詞與標準答案一起輸出。
+
 ## 解讀時要注意
 
 - 合成歌聲比真人演唱規律得多（咬字清楚、沒有轉音與和聲），伴奏也比真實歌曲單純。
