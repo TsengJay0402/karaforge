@@ -55,7 +55,7 @@ class UvrSeparator:
             languages=("*",),
             devices=("cpu", "cuda", "mps"),
             memory_mb=2500,
-            description_zh=f"UVR 分離模型:{self._spec.title}",
+            description_zh=f"UVR 分離模型：{self._spec.title}",
             description_en=f"UVR separation model: {self._spec.title}",
             models=(model_id,),
         )
@@ -74,9 +74,9 @@ class UvrSeparator:
                 from audio_separator.separator import Separator
             except ImportError as exc:
                 raise DependencyMissingError(
-                    "缺少 audio-separator 套件,無法分離人聲。",
+                    "缺少 audio-separator 套件，無法分離人聲。",
                     "The audio-separator package is missing; vocals cannot be separated.",
-                    hint_zh="請執行:uv sync --extra cpu",
+                    hint_zh="請執行：uv sync --extra cpu",
                     hint_en="Run: uv sync --extra cpu",
                     detail=str(exc),
                 ) from exc
@@ -152,7 +152,7 @@ class UvrSeparator:
             raise PipelineError(
                 "人聲分離失敗。",
                 "Vocal separation failed.",
-                hint_zh="如果是記憶體不足,請關閉其他程式,或改用 cpu-lite 設定檔。",
+                hint_zh="如果是記憶體不足，請關閉其他程式，或改用 cpu-lite 設定檔。",
                 hint_en="If this is an out-of-memory error, close other programs or use "
                 "the cpu-lite profile.",
                 detail=f"{type(exc).__name__}: {exc}",

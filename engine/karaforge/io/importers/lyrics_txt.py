@@ -182,7 +182,7 @@ def parse_lyrics_text(text: str) -> ParsedLyrics:
         raise LyricsFormatError(
             "歌詞檔裡沒有任何歌詞。",
             "The lyrics file contains no lyric lines.",
-            hint_zh="每一行一句歌詞;以 # 開頭的行是歌曲資訊,空行代表段落分隔。",
+            hint_zh="每一行一句歌詞；以 # 開頭的行是歌曲資訊，空行代表段落分隔。",
             hint_en="Write one lyric line per row; rows starting with # are metadata and "
             "blank rows separate paragraphs.",
         )
@@ -228,7 +228,7 @@ def read_text_file(path: Path) -> str:
         data = path.read_bytes()
     except OSError as exc:
         raise LyricsFormatError(
-            f"無法讀取歌詞檔:{path}",
+            f"無法讀取歌詞檔：{path}",
             f"Cannot read the lyrics file: {path}",
             detail=str(exc),
         ) from exc
@@ -236,7 +236,7 @@ def read_text_file(path: Path) -> str:
     if decoded is not None:
         return decoded
     raise LyricsFormatError(
-        f"無法辨識歌詞檔的文字編碼:{path.name}",
+        f"無法辨識歌詞檔的文字編碼：{path.name}",
         f"Cannot detect the text encoding of {path.name}.",
         hint_zh="請把檔案另存為 UTF-8 編碼。",
         hint_en="Please save the file as UTF-8.",

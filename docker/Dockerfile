@@ -59,16 +59,24 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg tini \
     && rm -rf /var/lib/apt/lists/*
 
+# The data folders are writable by any user id, so that the container can also be started
+# with the id of whoever owns a bind-mounted projects folder (`docker run --user ...`).
 RUN groupadd --gid 1000 karaforge \
     && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin karaforge \
     && mkdir -p /data/home /data/projects \
-    && chown -R karaforge:karaforge /data
+    && chown -R karaforge:karaforge /data \
+    && chmod 1777 /data/home /data/projects
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=web /src/web/dist /app/web
 
+# HOME and the caches of the numeric libraries point at places every user id can write to.
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
+    HOME=/data/home \
+    XDG_CACHE_HOME=/data/home/.cache \
+    NUMBA_CACHE_DIR=/tmp/numba-cache \
+    MPLCONFIGDIR=/tmp/matplotlib \
     KARAFORGE_HOME=/data/home \
     KARAFORGE_WORKSPACE=/data/projects \
     KARAFORGE_WEB_DIST=/app/web

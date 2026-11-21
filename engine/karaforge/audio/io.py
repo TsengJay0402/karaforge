@@ -32,7 +32,7 @@ def read_wav(path: Path) -> tuple[FloatArray, int]:
         data, rate = sf.read(path, dtype="float32", always_2d=True)
     except (OSError, RuntimeError) as exc:
         raise MediaError(
-            f"無法讀取音訊檔:{path.name}",
+            f"無法讀取音訊檔：{path.name}",
             f"Cannot read audio file: {path.name}",
             detail=str(exc),
         ) from exc

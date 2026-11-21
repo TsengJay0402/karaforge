@@ -68,14 +68,14 @@ def resolve_device(preference: DevicePreference = "auto") -> DeviceChoice:
         return DeviceChoice(
             "cpu",
             "CPU",
-            "找不到可用的 CUDA 裝置(或安裝的是 CPU 版 PyTorch),改用 CPU。",
+            "找不到可用的 CUDA 裝置（或安裝的是 CPU 版 PyTorch），改用 CPU。",
             "No usable CUDA device (or a CPU-only PyTorch build is installed); using the CPU.",
         )
     if preference == "mps":
         return DeviceChoice(
             "cpu",
             "CPU",
-            "這台機器無法使用 Apple MPS,改用 CPU。",
+            "這台機器無法使用 Apple MPS，改用 CPU。",
             "Apple MPS is not available on this machine; using the CPU.",
         )
     return DeviceChoice("cpu", "CPU")

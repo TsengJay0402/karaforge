@@ -151,9 +151,9 @@ class _Wav2Vec2:
             from transformers import Wav2Vec2ForCTC
         except ImportError as exc:
             raise DependencyMissingError(
-                "缺少 transformers / torch,無法使用 CTC 對齊器。",
+                "缺少 transformers / torch，無法使用 CTC 對齊器。",
                 "transformers / torch are missing; the CTC aligner is unavailable.",
-                hint_zh="請執行:uv sync --extra cpu",
+                hint_zh="請執行：uv sync --extra cpu",
                 hint_en="Run: uv sync --extra cpu",
                 detail=str(exc),
             ) from exc
@@ -269,7 +269,9 @@ class CtcAligner:
             else tuple(sorted(languages)),
             devices=("cpu", "cuda", "mps"),
             memory_mb=1800 * len(self._models),
-            description_zh="wav2vec2 CTC 強制對齊(" + "、".join(spec.title for spec in specs) + ")",
+            description_zh="wav2vec2 CTC 強制對齊（"
+            + "、".join(spec.title for spec in specs)
+            + "）",
             description_en="wav2vec2 CTC forced alignment ("
             + ", ".join(s.title for s in specs)
             + ")",

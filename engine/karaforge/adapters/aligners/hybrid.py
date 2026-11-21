@@ -88,7 +88,7 @@ class HybridAligner:
             languages=tuple(sorted(set(first.languages) | set(second.languages))),
             devices=tuple(kind for kind in first.devices if kind in second.devices),
             memory_mb=first.memory_mb + second.memory_mb,
-            description_zh="CTC(中文字)與 Qwen3-ForcedAligner(其餘)互補,並互為備援",
+            description_zh="CTC（中文字）與 Qwen3-ForcedAligner（其餘）互補，並互為備援",
             description_en="CTC for Chinese characters and Qwen3-ForcedAligner for the rest, "
             "each backing the other up",
             models=(*first.models, *second.models),

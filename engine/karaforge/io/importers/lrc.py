@@ -136,7 +136,7 @@ def parse_lrc_file(path: Path) -> ParsedLyrics:
         raise LyricsFormatError(
             f"「{path.name}」裡沒有帶時間標記的歌詞。",
             f"'{path.name}' contains no timed lyric lines.",
-            hint_zh="LRC 的每一行應該以 [分:秒.百分秒] 開頭;純文字歌詞請改用 .txt。",
+            hint_zh="LRC 的每一行應該以 [分:秒.百分秒] 開頭；純文字歌詞請改用 .txt。",
             hint_en="Each LRC line should start with [mm:ss.xx]; use .txt for plain lyrics.",
         )
     result = ParsedLyrics(meta=meta)

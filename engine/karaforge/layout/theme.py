@@ -262,7 +262,7 @@ def _assign(target: Any, part: str, value: Any, dotted: str) -> None:
 
 def _unknown_key(key: str) -> ThemeError:
     return ThemeError(
-        f"主題沒有這個設定:{key}",
+        f"主題沒有這個設定：{key}",
         f"Unknown theme setting: {key}",
         hint_zh="可用的設定見 docs/themes.md。",
         hint_en="See docs/themes.md for the available settings.",
@@ -278,7 +278,7 @@ def _validate(data: Any, origin: str) -> Theme:
             for error in exc.errors()[:6]
         )
         raise ThemeError(
-            f"主題內容不正確({origin})。",
+            f"主題內容不正確（{origin}）。",
             f"Invalid theme ({origin}).",
             detail=problems,
         ) from exc
@@ -310,13 +310,13 @@ def load_theme_file(path: Path) -> Theme:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
         raise ThemeError(
-            f"無法讀取主題檔:{path}",
+            f"無法讀取主題檔：{path}",
             f"Cannot read theme file: {path}",
             detail=str(exc),
         ) from exc
     if not isinstance(data, dict):
         raise ThemeError(
-            f"主題檔格式錯誤:{path.name}",
+            f"主題檔格式錯誤：{path.name}",
             f"Malformed theme file: {path.name}",
             detail="top-level value is not a mapping",
         )
@@ -338,7 +338,7 @@ def load_theme(name: str) -> Theme:
     raise ThemeError(
         f"找不到主題「{name}」。",
         f"Theme not found: {name}",
-        hint_zh=f"可用的主題:{'、'.join(available) or '(無)'}",
+        hint_zh=f"可用的主題：{'、'.join(available) or '(無)'}",
         hint_en=f"Available themes: {', '.join(available) or 'none'}",
     )
 

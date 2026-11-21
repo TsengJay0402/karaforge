@@ -9,7 +9,12 @@ colour, outline included, the moment it is sung.
 
 ![The editor: a preview identical to the export on the left, the lyrics on the right, and a timeline on which every character can be dragged](docs/images/editor.png)
 
-![The theme panel: font, position, colours and readings](docs/images/editor-theme.png)
+| Exported video: title card and countdown | Sung characters change colour, outline included | The zhuyin-learner theme |
+|---|---|---|
+| ![The title card shows title and credits; countdown dots above the first line](docs/images/demo-frame-title.png) | ![Two lines of lyrics; the sung characters are blue with a white outline](docs/images/demo-frame.png) | ![Zhuyin readings above every character](docs/images/demo-frame-zhuyin.png) |
+
+These are frames of the video in [`examples/demo/`](examples/): a synthesised song, processed fully
+automatically, nothing corrected by hand.
 
 ## What it does
 

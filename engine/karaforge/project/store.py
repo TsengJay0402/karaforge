@@ -112,9 +112,9 @@ class ProjectStore:
         with self._lock:
             if self.exists() and not overwrite:
                 raise ProjectError(
-                    f"專案已經存在:{self.root}",
+                    f"專案已經存在：{self.root}",
                     f"Project already exists: {self.root}",
-                    hint_zh="換一個輸出路徑,或加上 --force 覆寫。",
+                    hint_zh="換一個輸出路徑，或加上 --force 覆寫。",
                     hint_en="Choose another output path or pass --force to overwrite.",
                 )
             if overwrite and self.root.exists():
@@ -130,14 +130,14 @@ class ProjectStore:
         path = self.paths.project_file
         if not path.is_file():
             raise ProjectError(
-                f"找不到專案:{self.root}(缺少 {PROJECT_FILE})",
+                f"找不到專案：{self.root}（缺少 {PROJECT_FILE}）",
                 f"Not a KaraForge project: {self.root} ({PROJECT_FILE} is missing)",
             )
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise ProjectError(
-                f"無法讀取專案檔:{path}",
+                f"無法讀取專案檔：{path}",
                 f"Cannot read the project file: {path}",
                 hint_zh=f"同一個資料夾裡的 {PROJECT_FILE}.bak 是上一次儲存的備份。",
                 hint_en=f"{PROJECT_FILE}.bak in the same folder is a backup of the previous save.",
@@ -145,7 +145,7 @@ class ProjectStore:
             ) from exc
         if not isinstance(data, dict):
             raise ProjectError(
-                f"專案檔格式錯誤:{path}",
+                f"專案檔格式錯誤：{path}",
                 f"Malformed project file: {path}",
                 detail="top-level JSON value is not an object",
             )
@@ -163,7 +163,7 @@ class ProjectStore:
                 return Project.model_validate(migrated)
             except ValidationError as exc:
                 raise ProjectError(
-                    f"專案檔內容不符合格式:{self.paths.project_file}",
+                    f"專案檔內容不符合格式：{self.paths.project_file}",
                     f"The project file is invalid: {self.paths.project_file}",
                     detail=str(exc),
                 ) from exc
@@ -188,7 +188,7 @@ class ProjectStore:
             on_disk = self.current_revision() if self.exists() else 0
             if expected_revision is not None and on_disk != expected_revision:
                 raise RevisionConflictError(
-                    "專案已經被其他視窗或背景工作修改過,為了避免覆蓋,這次沒有儲存。",
+                    "專案已經被其他視窗或背景工作修改過，為了避免覆蓋，這次沒有儲存。",
                     "The project was changed elsewhere (another window or a background job); "
                     "nothing was saved to avoid overwriting it.",
                     hint_zh="請重新載入專案後再試一次。",

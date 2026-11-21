@@ -314,7 +314,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
             project = Project.model_validate(body.project)
         except ValueError as error:
             raise ProjectError(
-                "送來的專案內容不符合格式,沒有儲存。",
+                "送來的專案內容不符合格式，沒有儲存。",
                 "The submitted project is not valid; nothing was saved.",
                 detail=str(error),
             ) from error
@@ -355,7 +355,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
         workspace.store(project_id)
         if jobs.active_for(project_id) is not None:
             raise ProjectError(
-                "這個專案還有工作在執行,請先取消再刪除。",
+                "這個專案還有工作在執行，請先取消再刪除。",
                 "A job is still running for this project; cancel it before deleting.",
             )
         workspace.delete(project_id)
@@ -401,7 +401,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
         store = workspace.store(project_id)
         path = _media_path(store, store.load(), name)
         if path is None:
-            raise ProjectNotFoundError(f"沒有這個媒體檔:{name}", f"No such media file: {name}")
+            raise ProjectNotFoundError(f"沒有這個媒體檔：{name}", f"No such media file: {name}")
         media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         return FileResponse(path, media_type=media_type)
 
@@ -572,7 +572,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
         import re
 
         if not re.match(_THEME_NAME, name) or not target.is_file():
-            raise ThemeError(f"沒有這個自訂主題:{name}", f"There is no user theme named '{name}'.")
+            raise ThemeError(f"沒有這個自訂主題：{name}", f"There is no user theme named '{name}'.")
         target.unlink()
         return Response(status_code=204)
 
@@ -593,7 +593,7 @@ def create_app(settings: ServerSettings) -> FastAPI:
                     media_type="font/otf" if face.path.suffix.lower() == ".otf" else "font/ttf",
                     headers={"Cache-Control": "max-age=86400"},
                 )
-        raise ThemeError(f"找不到字型檔:{file}", f"Font file not found: {file}")
+        raise ThemeError(f"找不到字型檔：{file}", f"Font file not found: {file}")
 
     # ------------------------------------------------------------------------ models
 
@@ -622,7 +622,7 @@ def _sse(event: dict[str, Any]) -> str:
 def _job(jobs: JobManager, job_id: str) -> Job:
     job = jobs.get(job_id)
     if job is None:
-        raise ProjectNotFoundError(f"找不到工作:{job_id}", f"Job not found: {job_id}")
+        raise ProjectNotFoundError(f"找不到工作：{job_id}", f"Job not found: {job_id}")
     return job
 
 
@@ -727,7 +727,7 @@ def _export_files(project_id: str, store: ProjectStore) -> list[dict[str, Any]]:
 def _export_path(store: ProjectStore, name: str) -> Path:
     path = (store.paths.exports / name).resolve()
     if path.parent != store.paths.exports.resolve() or not path.is_file():
-        raise ProjectNotFoundError(f"找不到匯出檔:{name}", f"Export not found: {name}")
+        raise ProjectNotFoundError(f"找不到匯出檔：{name}", f"Export not found: {name}")
     return path
 
 
@@ -745,9 +745,9 @@ def _preview(
         project.render.resolution = resolution
     if not any(token.is_timed for line in project.lines for token in line.tokens):
         raise PipelineError(
-            "歌詞還沒有時間,沒有東西可以預覽。",
+            "歌詞還沒有時間，沒有東西可以預覽。",
             "The lyrics have no timing yet; there is nothing to preview.",
-            hint_zh="請先處理這個專案,或用打點模式標記時間。",
+            hint_zh="請先處理這個專案，或用打點模式標記時間。",
             hint_en="Process the project first, or tap the timing in.",
         )
     plan = build_plan(project)
@@ -802,12 +802,12 @@ def _save_theme(name: str, body: dict[str, Any]) -> dict[str, Any]:
 
     if not re.match(_THEME_NAME, name):
         raise ThemeError(
-            "主題名稱只能用小寫英文字母、數字與連字號(最多 40 個字元)。",
+            "主題名稱只能用小寫英文字母、數字與連字號（最多 40 個字元）。",
             "Theme names may only use lower-case letters, digits and hyphens (at most 40).",
         )
     if (paths.bundled_dir("themes") / f"{name}.yaml").is_file():
         raise ThemeError(
-            f"「{name}」是內建主題,請換一個名稱另存。",
+            f"「{name}」是內建主題，請換一個名稱另存。",
             f"'{name}' is a built-in theme; save your version under another name.",
         )
     try:

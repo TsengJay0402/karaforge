@@ -136,7 +136,8 @@ class QwenAligner:
             languages=("zh", "yue", "en", "ja", "ko", "fr", "de", "es", "pt", "it", "ru"),
             devices=("cpu", "cuda"),
             memory_mb=3200,
-            description_zh="Qwen3-ForcedAligner-0.6B:一次前向計算預測每個字的起訖時間(80 ms 量化)",
+            description_zh="Qwen3-ForcedAligner-0.6B：一次前向計算預測每個字的起訖時間"
+            "（80 ms 量化）",
             description_en="Qwen3-ForcedAligner-0.6B: predicts every word boundary in one pass "
             "(80 ms classes)",
             models=(self._model_id,),
@@ -154,9 +155,10 @@ class QwenAligner:
             package: Any = importlib.import_module("qwen_asr")
         except ImportError as exc:
             raise DependencyMissingError(
-                "缺少 qwen-asr 套件,無法使用 Qwen3 對齊器。",
+                "缺少 qwen-asr 套件，無法使用 Qwen3 對齊器。",
                 "The qwen-asr package is missing; the Qwen3 aligner is unavailable.",
-                hint_zh='請執行:uv sync --extra cpu --extra qwen(或 pip install "karaforge[qwen]")',
+                hint_zh="請執行：uv sync --extra cpu --extra qwen"
+                '（或 pip install "karaforge[qwen]"）',
                 hint_en='Run: uv sync --extra cpu --extra qwen (or pip install "karaforge[qwen]")',
                 detail=str(exc),
             ) from exc

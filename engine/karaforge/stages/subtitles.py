@@ -39,7 +39,7 @@ def require_aligned(project: Project) -> None:
         raise PipelineError(
             "這個專案還沒有歌詞。",
             "This project has no lyrics yet.",
-            hint_zh="請加入歌詞,或執行 `kf run` 讓語音辨識產生草稿。",
+            hint_zh="請加入歌詞，或執行 `kf run` 讓語音辨識產生草稿。",
             hint_en="Add lyrics, or run `kf run` to draft them with speech recognition.",
         )
     if not any(token.is_timed for line in project.lines for token in line.tokens):

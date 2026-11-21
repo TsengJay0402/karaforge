@@ -75,13 +75,13 @@ def create_project(
         ProjectError: If the project exists and ``overwrite`` is false.
     """
     if not media.is_file():
-        raise MediaError(f"找不到媒體檔:{media}", f"Media file not found: {media}")
+        raise MediaError(f"找不到媒體檔：{media}", f"Media file not found: {media}")
     extension = media.suffix.lower()
     if extension not in MEDIA_EXTENSIONS:
         raise MediaError(
-            f"不支援的檔案類型:{media.name}",
+            f"不支援的檔案類型：{media.name}",
             f"Unsupported file type: {media.name}",
-            hint_zh="支援的格式:" + "、".join(ext.lstrip(".") for ext in MEDIA_EXTENSIONS),
+            hint_zh="支援的格式：" + "、".join(ext.lstrip(".") for ext in MEDIA_EXTENSIONS),
             hint_en="Supported: " + ", ".join(ext.lstrip(".") for ext in MEDIA_EXTENSIONS),
         )
     parsed: ParsedLyrics | None = load_lyrics(lyrics) if lyrics is not None else None
@@ -143,14 +143,14 @@ def create_or_update_project(
     if not store.exists():
         return create_project(media, project_dir, lyrics=lyrics, language=language), True
     if not media.is_file():
-        raise MediaError(f"找不到媒體檔:{media}", f"Media file not found: {media}")
+        raise MediaError(f"找不到媒體檔：{media}", f"Media file not found: {media}")
     project = store.load()
     source = store.paths.resolve(project.media.source)
     if source is None or not source.is_file() or not _same_content(source, media):
         raise ProjectError(
             f"{project_dir} 已經是另一個媒體檔的專案。",
             f"{project_dir} already holds a project for a different media file.",
-            hint_zh="請換一個輸出檔名,或先刪除那個專案資料夾。",
+            hint_zh="請換一個輸出檔名，或先刪除那個專案資料夾。",
             hint_en="Choose another output name or delete that project folder first.",
         )
     changed = False

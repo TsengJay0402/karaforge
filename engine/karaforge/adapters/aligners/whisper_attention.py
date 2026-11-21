@@ -55,7 +55,7 @@ class WhisperAttentionAligner:
             languages=("*",),
             devices=("cpu", "cuda"),
             memory_mb=1000,
-            description_zh=f"Whisper 交叉注意力強制對齊({spec.title})",
+            description_zh=f"Whisper 交叉注意力強制對齊（{spec.title}）",
             description_en=f"Whisper cross-attention forced alignment ({spec.title})",
             models=(model_id,),
         )
@@ -75,7 +75,7 @@ class WhisperAttentionAligner:
             raise AlignmentError(
                 "這一行的時間窗超過 Whisper 對齊器的 30 秒上限。",
                 "The line's window exceeds the 30-second limit of the Whisper aligner.",
-                hint_zh="請把這一行拆短,或改用 CTC 對齊器(align.aligner=ctc)。",
+                hint_zh="請把這一行拆短，或改用 CTC 對齊器（align.aligner=ctc）。",
                 hint_en="Split the line or use the CTC aligner (align.aligner=ctc).",
                 detail=f"window {duration:.1f}s",
             )

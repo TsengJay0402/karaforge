@@ -81,7 +81,7 @@ class Workspace:
         """
         if not project_id or _UNSAFE.search(project_id) or project_id in (".", ".."):
             raise ProjectNotFoundError(
-                f"找不到專案:{project_id}", f"Project not found: {project_id}"
+                f"找不到專案：{project_id}", f"Project not found: {project_id}"
             )
         return self.root / f"{project_id}{PROJECT_SUFFIX}"
 
@@ -94,7 +94,7 @@ class Workspace:
         store = ProjectStore(self.folder(project_id))
         if not store.exists():
             raise ProjectNotFoundError(
-                f"找不到專案:{project_id}", f"Project not found: {project_id}"
+                f"找不到專案：{project_id}", f"Project not found: {project_id}"
             )
         return store
 

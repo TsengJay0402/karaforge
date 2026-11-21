@@ -68,13 +68,13 @@ def migrate(
     version = data.get("schema_version")
     if not isinstance(version, int) or isinstance(version, bool) or version < 0:
         raise ProjectError(
-            "專案檔缺少有效的 schema_version,無法判斷格式版本。",
+            "專案檔缺少有效的 schema_version，無法判斷格式版本。",
             "The project file has no valid schema_version.",
             detail=f"schema_version={version!r}",
         )
     if version > target_version:
         raise ProjectError(
-            f"這個專案是用較新版本的 KaraForge 建立的(格式版本 {version}),"
+            f"這個專案是用較新版本的 KaraForge 建立的（格式版本 {version}），"
             f"目前的程式只支援到版本 {target_version}。",
             f"This project was created by a newer KaraForge (schema version {version}); "
             f"this build supports up to version {target_version}.",
@@ -87,7 +87,7 @@ def migrate(
         step = registry.get(version)
         if step is None:
             raise ProjectError(
-                f"無法把專案從格式版本 {version} 升級到 {target_version}:缺少遷移步驟。",
+                f"無法把專案從格式版本 {version} 升級到 {target_version}：缺少遷移步驟。",
                 f"Cannot upgrade the project from schema version {version} to {target_version}: "
                 "no migration is registered.",
             )

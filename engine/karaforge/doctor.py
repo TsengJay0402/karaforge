@@ -51,13 +51,13 @@ def check_python() -> Check:
         return Check(
             "python",
             "fail",
-            f"Python {version} 太舊,需要 3.11 以上。",
+            f"Python {version} 太舊，需要 3.11 以上。",
             f"Python {version} is too old; 3.11 or newer is required.",
         )
     return Check(
         "python",
         "ok",
-        f"KaraForge {__version__},Python {version}({system})",
+        f"KaraForge {__version__}、Python {version}（{system}）",
         f"KaraForge {__version__}, Python {version} ({system})",
     )
 
@@ -79,22 +79,22 @@ def check_ffmpeg() -> list[Check]:
         Check(
             "ffmpeg",
             "ok",
-            f"ffmpeg {capabilities.version}({tools.ffmpeg})",
+            f"ffmpeg {capabilities.version}（{tools.ffmpeg}）",
             f"ffmpeg {capabilities.version} ({tools.ffmpeg})",
         )
     ]
     if capabilities.has_libass:
         checks.append(
-            Check("libass", "ok", "ffmpeg 內建 libass,可以燒錄字幕。", "ffmpeg has libass.")
+            Check("libass", "ok", "ffmpeg 內建 libass，可以燒錄字幕。", "ffmpeg has libass.")
         )
     else:
         checks.append(
             Check(
                 "libass",
                 "fail",
-                "這個 ffmpeg 沒有 libass,無法把字幕燒進 MP4。",
+                "這個 ffmpeg 沒有 libass，無法把字幕燒進 MP4。",
                 "This ffmpeg lacks libass; lyrics cannot be burned into an MP4.",
-                "請安裝含 libass 的 ffmpeg(多數發行版的套件都有);MKV 與字幕檔的匯出不受影響。",
+                "請安裝含 libass 的 ffmpeg（多數發行版的套件都有）；MKV 與字幕檔的匯出不受影響。",
                 "Install an ffmpeg build with libass (most distribution packages have it); "
                 "MKV and subtitle-file exports are not affected.",
             )
@@ -105,7 +105,7 @@ def check_ffmpeg() -> list[Check]:
             Check(
                 "encoders",
                 "fail",
-                f"ffmpeg 缺少編碼器:{'、'.join(missing)}。",
+                f"ffmpeg 缺少編碼器：{'、'.join(missing)}。",
                 f"ffmpeg is missing encoders: {', '.join(missing)}.",
             )
         )
@@ -115,8 +115,8 @@ def check_ffmpeg() -> list[Check]:
         Check(
             "hardware-encoders",
             "ok",
-            "ffmpeg 內含的硬體編碼器:"
-            + ("、".join(hardware) + "(能不能用取決於這台機器的硬體)" if hardware else "無"),
+            "ffmpeg 內含的硬體編碼器："
+            + ("、".join(hardware) + "（能不能用取決於這台機器的硬體）" if hardware else "無"),
             "Hardware encoders built into ffmpeg: "
             + (
                 ", ".join(hardware) + " (usable only with matching hardware)"
@@ -142,7 +142,7 @@ def check_device() -> Check:
             "fail",
             "沒有安裝 PyTorch。",
             "PyTorch is not installed.",
-            "請執行 uv sync --extra cpu(或 --extra cuda)。",
+            "請執行 uv sync --extra cpu（或 --extra cuda）。",
             "Run uv sync --extra cpu (or --extra cuda).",
         )
     device = resolve_device("auto")
@@ -150,9 +150,9 @@ def check_device() -> Check:
         return Check(
             "device",
             "warn",
-            f"使用 CPU({cpu_threads()} 個執行緒,PyTorch {build});沒有偵測到可用的 GPU。",
+            f"使用 CPU（{cpu_threads()} 個執行緒，PyTorch {build}）；沒有偵測到可用的 GPU。",
             f"Using the CPU ({cpu_threads()} threads, PyTorch {build}); no usable GPU was found.",
-            "CPU 可以完成所有工作,只是比較慢。有 NVIDIA 顯示卡時請安裝 --extra cuda。",
+            "CPU 可以完成所有工作，只是比較慢。有 NVIDIA 顯示卡時請安裝 --extra cuda。",
             "Everything works on a CPU, only slower. With an NVIDIA card install --extra cuda.",
         )
     return Check(
@@ -198,7 +198,7 @@ def check_fonts_and_themes() -> list[Check]:
             Check(
                 "themes",
                 "warn",
-                f"這些主題無法使用:{'、'.join(broken)}。",
+                f"這些主題無法使用：{'、'.join(broken)}。",
                 f"These themes cannot be used: {', '.join(broken)}.",
             )
         )
@@ -232,7 +232,7 @@ def check_home() -> Check:
         return Check(
             "home",
             "fail",
-            f"資料目錄無法寫入:{home}",
+            f"資料目錄無法寫入：{home}",
             f"The data directory is not writable: {home}",
             "請用 KARAFORGE_HOME 指定一個可以寫入的資料夾。",
             "Point KARAFORGE_HOME at a folder you can write to.",
@@ -240,7 +240,7 @@ def check_home() -> Check:
     return Check(
         "home",
         "ok",
-        f"資料目錄 {home}(剩餘空間 {_size(free)})",
+        f"資料目錄 {home}（剩餘空間 {_size(free)}）",
         f"Data directory {home} ({_size(free)} free)",
     )
 
@@ -263,7 +263,7 @@ def check_models() -> list[Check]:
                 Check(
                     f"models:{name}",
                     "ok",
-                    f"設定檔 {name}(對齊器 {aligner}):{len(specs)} 個模型都已安裝。",
+                    f"設定檔 {name}（對齊器 {aligner}）：{len(specs)} 個模型都已安裝。",
                     f"Profile {name} (aligner {aligner}): all {len(specs)} models are installed.",
                 )
             )
@@ -275,12 +275,12 @@ def check_models() -> list[Check]:
             Check(
                 f"models:{name}",
                 status,
-                f"設定檔 {name}(對齊器 {aligner}):還缺 {len(missing)} 個模型"
+                f"設定檔 {name}（對齊器 {aligner}）：還缺 {len(missing)} 個模型"
                 f"({_size(need)}):{listed}",
                 f"Profile {name} (aligner {aligner}): {len(missing)} models missing "
                 f"({_size(need)}): {listed}",
-                f"第一次處理時會自動下載,也可以先執行 kf models download --profile {name}。"
-                + ("" if need < free else "磁碟空間不足!"),
+                f"第一次處理時會自動下載，也可以先執行 kf models download --profile {name}。"
+                + ("" if need < free else "磁碟空間不足！"),
                 f"They are downloaded on first use, or run kf models download --profile {name}."
                 + ("" if need < free else " Not enough disk space!"),
             )
@@ -290,7 +290,7 @@ def check_models() -> list[Check]:
             Check(
                 "qwen",
                 "ok",
-                "已安裝 qwen-asr:可以使用 hybrid 對齊器(gpu-quality 的預設)。",
+                "已安裝 qwen-asr：可以使用 hybrid 對齊器（gpu-quality 的預設）。",
                 "qwen-asr is installed: the hybrid aligner (default of gpu-quality) is available.",
             )
         )
@@ -301,7 +301,7 @@ def check_models() -> list[Check]:
                 "ok",
                 "沒有安裝選用的 qwen-asr:gpu-quality 會改用 CTC 對齊器。",
                 "The optional qwen-asr package is not installed: gpu-quality falls back to CTC.",
-                "想要較好的英文與中英混雜對齊:uv sync --extra cpu --extra qwen",
+                "想要較好的英文與中英混雜對齊：uv sync --extra cpu --extra qwen",
                 "For better English and mixed-language alignment: uv sync --extra cpu --extra qwen",
             )
         )

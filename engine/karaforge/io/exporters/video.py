@@ -81,9 +81,9 @@ def parse_audio_option(value: str) -> tuple[AudioMode, float]:
         except ValueError:
             pass
     raise ExportError(
-        f"看不懂的音訊選項:{value}",
+        f"看不懂的音訊選項：{value}",
         f"Unrecognised audio option: {value}",
-        hint_zh="可用:instrumental(純伴奏)、guide:-12db(伴奏加導唱)、original(原曲)。",
+        hint_zh="可用：instrumental（純伴奏）、guide:-12db（伴奏加導唱）、original（原曲）。",
         hint_en="Use instrumental, guide:-12db or original.",
     )
 
@@ -154,7 +154,7 @@ def export_video(
     duration_ms = project.meta.duration_ms
     if duration_ms <= 0:
         raise ExportError(
-            "專案還沒有處理過(不知道歌曲長度),無法匯出。",
+            "專案還沒有處理過（不知道歌曲長度），無法匯出。",
             "The project has not been processed yet; nothing to export.",
             hint_zh="請先執行 `kf run <專案>`。",
             hint_en="Run `kf run <project>` first.",
@@ -262,9 +262,9 @@ def export_video(
             nonlocal instrumental_index, next_index
             if instrumental is None or not instrumental.is_file():
                 raise ExportError(
-                    "還沒有伴奏軌,無法以伴唱模式匯出。",
+                    "還沒有伴奏軌，無法以伴唱模式匯出。",
                     "There is no accompaniment stem yet.",
-                    hint_zh="請先執行 `kf run <專案>` 做人聲分離,或改用 --audio original。",
+                    hint_zh="請先執行 `kf run <專案>` 做人聲分離，或改用 --audio original。",
                     hint_en="Run `kf run <project>` first, or export with --audio original.",
                 )
             if instrumental_index is None:

@@ -1,0 +1,614 @@
+{
+  "schema_version": 3,
+  "revision": 7,
+  "meta": {
+    "title": "雨後的星空",
+    "artist": "KaraForge 合成歌聲",
+    "lyricist": "KaraForge contributors",
+    "composer": "kfbench（程式合成）",
+    "language": "zh-TW",
+    "duration_ms": 48500,
+    "lyrics_source": "user"
+  },
+  "media": {
+    "source": "media/source.mp3",
+    "audio": "media/audio.wav",
+    "vocals": "media/vocals.wav",
+    "instrumental": "media/instrumental.wav",
+    "has_video": false
+  },
+  "analysis": {
+    "tempo_bpm": 89.10290948275862,
+    "beats_ms": [
+      1370,
+      2043,
+      2694,
+      3367,
+      4040,
+      4690,
+      5364,
+      6037,
+      6711,
+      7384,
+      8034,
+      8707,
+      9358,
+      10031,
+      10704,
+      11355,
+      12028,
+      12701,
+      13375,
+      14048,
+      14698,
+      15372,
+      16045,
+      16695,
+      17369,
+      18042,
+      18692,
+      19365,
+      20039,
+      20689,
+      21362,
+      22036,
+      22709,
+      23359,
+      24033,
+      24706,
+      25356,
+      26030,
+      26703,
+      27353,
+      28026,
+      28700,
+      29373,
+      30047,
+      30697,
+      31370,
+      32067,
+      32717,
+      33367,
+      34040,
+      34691,
+      35364,
+      36037,
+      36688,
+      37361,
+      38034,
+      38708,
+      39358,
+      40031,
+      40705,
+      41378,
+      42051,
+      42701,
+      43375,
+      44025,
+      44698,
+      45372,
+      46022,
+      46695,
+      47369
+    ],
+    "vocal_regions": [
+      [
+        5670,
+        8430
+      ],
+      [
+        11340,
+        17930
+      ],
+      [
+        29340,
+        30160
+      ],
+      [
+        30630,
+        35590
+      ],
+      [
+        38010,
+        44590
+      ]
+    ]
+  },
+  "singers": [
+    {
+      "id": "m",
+      "label": "男",
+      "theme_slot": "male"
+    },
+    {
+      "id": "f",
+      "label": "女",
+      "theme_slot": "female"
+    },
+    {
+      "id": "all",
+      "label": "合",
+      "theme_slot": "duet"
+    }
+  ],
+  "lines": [
+    {
+      "id": "L001",
+      "singer": "m",
+      "paragraph": 0,
+      "tokens": [
+        {
+          "text": "車",
+          "start_ms": 5660,
+          "end_ms": 5830,
+          "ruby": "ㄔㄜ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "窗",
+          "start_ms": 5830,
+          "end_ms": 6020,
+          "ruby": "ㄔㄨㄤ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "上",
+          "start_ms": 6020,
+          "end_ms": 6170,
+          "ruby": "ㄕㄤˋ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "的",
+          "start_ms": 6170,
+          "end_ms": 6360,
+          "ruby": "˙ㄉㄜ",
+          "ruby_source": "auto",
+          "confidence": 0.996,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "雨",
+          "start_ms": 6360,
+          "end_ms": 6500,
+          "ruby": "ㄩˇ",
+          "ruby_source": "auto",
+          "confidence": 0.973,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "滴 ",
+          "start_ms": 6500,
+          "end_ms": 6660,
+          "ruby": "ㄉㄧ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "排",
+          "start_ms": 6660,
+          "end_ms": 6830,
+          "ruby": "ㄆㄞˊ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "成",
+          "start_ms": 6830,
+          "end_ms": 7000,
+          "ruby": "ㄔㄥˊ",
+          "ruby_source": "auto",
+          "confidence": 0.999,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "一",
+          "start_ms": 7000,
+          "end_ms": 7160,
+          "ruby": "ㄧˋ",
+          "ruby_source": "auto",
+          "confidence": 0.993,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "條",
+          "start_ms": 7160,
+          "end_ms": 7330,
+          "ruby": "ㄊㄧㄠˊ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "線",
+          "start_ms": 7330,
+          "end_ms": 8440,
+          "ruby": "ㄒㄧㄢˋ",
+          "ruby_source": "auto",
+          "confidence": 0.6,
+          "locked": false,
+          "source": "auto"
+        }
+      ],
+      "time_hint": null
+    },
+    {
+      "id": "L002",
+      "singer": "m",
+      "paragraph": 0,
+      "tokens": [
+        {
+          "text": "夜",
+          "start_ms": 11320,
+          "end_ms": 11990,
+          "ruby": "ㄧㄝˋ",
+          "ruby_source": "auto",
+          "confidence": 0.999,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "空",
+          "start_ms": 11990,
+          "end_ms": 12680,
+          "ruby": "ㄎㄨㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.943,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "裡",
+          "start_ms": 12680,
+          "end_ms": 13020,
+          "ruby": "ㄌㄧˇ",
+          "ruby_source": "auto",
+          "confidence": 0.842,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "的",
+          "start_ms": 13020,
+          "end_ms": 13770,
+          "ruby": "˙ㄉㄜ",
+          "ruby_source": "auto",
+          "confidence": 0.604,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "星",
+          "start_ms": 13770,
+          "end_ms": 14430,
+          "ruby": "ㄒㄧㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.574,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "星 ",
+          "start_ms": 14430,
+          "end_ms": 14710,
+          "ruby": "ㄒㄧㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.858,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "慢",
+          "start_ms": 14710,
+          "end_ms": 15050,
+          "ruby": "ㄇㄢˋ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "慢",
+          "start_ms": 15050,
+          "end_ms": 15670,
+          "ruby": "ㄇㄢˋ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "亮",
+          "start_ms": 15670,
+          "end_ms": 16330,
+          "ruby": "ㄌㄧㄤˋ",
+          "ruby_source": "auto",
+          "confidence": 0.828,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "起",
+          "start_ms": 16330,
+          "end_ms": 16760,
+          "ruby": "ㄑㄧˇ",
+          "ruby_source": "auto",
+          "confidence": 0.968,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "來",
+          "start_ms": 16760,
+          "end_ms": 17930,
+          "ruby": "ㄌㄞˊ",
+          "ruby_source": "auto",
+          "confidence": 0.888,
+          "locked": false,
+          "source": "auto"
+        }
+      ],
+      "time_hint": null
+    },
+    {
+      "id": "L003",
+      "singer": "m",
+      "paragraph": 1,
+      "tokens": [
+        {
+          "text": "山",
+          "start_ms": 29330,
+          "end_ms": 29990,
+          "ruby": "ㄕㄢ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "谷",
+          "start_ms": 29990,
+          "end_ms": 30160,
+          "ruby": "ㄍㄨˇ",
+          "ruby_source": "auto",
+          "confidence": 0.937,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "裡",
+          "start_ms": 30680,
+          "end_ms": 31330,
+          "ruby": "ㄌㄧˇ",
+          "ruby_source": "auto",
+          "confidence": 0.869,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "傳",
+          "start_ms": 31330,
+          "end_ms": 32020,
+          "ruby": "ㄔㄨㄢˊ",
+          "ruby_source": "auto",
+          "confidence": 0.864,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "來",
+          "start_ms": 32020,
+          "end_ms": 32350,
+          "ruby": "ㄌㄞˊ",
+          "ruby_source": "auto",
+          "confidence": 0.837,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "遙",
+          "start_ms": 32350,
+          "end_ms": 33030,
+          "ruby": "ㄧㄠˊ",
+          "ruby_source": "auto",
+          "confidence": 0.96,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "遠",
+          "start_ms": 33030,
+          "end_ms": 33350,
+          "ruby": "ㄩㄢˇ",
+          "ruby_source": "auto",
+          "confidence": 0.988,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "的",
+          "start_ms": 33350,
+          "end_ms": 34050,
+          "ruby": "˙ㄉㄜ",
+          "ruby_source": "auto",
+          "confidence": 0.881,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "回",
+          "start_ms": 34050,
+          "end_ms": 34330,
+          "ruby": "ㄏㄨㄟˊ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "音",
+          "start_ms": 34330,
+          "end_ms": 35590,
+          "ruby": "ㄧㄣ",
+          "ruby_source": "auto",
+          "confidence": 0.999,
+          "locked": false,
+          "source": "auto"
+        }
+      ],
+      "time_hint": null
+    },
+    {
+      "id": "L004",
+      "singer": "m",
+      "paragraph": 1,
+      "tokens": [
+        {
+          "text": "夜",
+          "start_ms": 37990,
+          "end_ms": 38650,
+          "ruby": "ㄧㄝˋ",
+          "ruby_source": "auto",
+          "confidence": 0.997,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "空",
+          "start_ms": 38650,
+          "end_ms": 39340,
+          "ruby": "ㄎㄨㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.919,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "裡",
+          "start_ms": 39340,
+          "end_ms": 39680,
+          "ruby": "ㄌㄧˇ",
+          "ruby_source": "auto",
+          "confidence": 0.861,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "的",
+          "start_ms": 39680,
+          "end_ms": 40450,
+          "ruby": "˙ㄉㄜ",
+          "ruby_source": "auto",
+          "confidence": 0.612,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "星",
+          "start_ms": 40450,
+          "end_ms": 41080,
+          "ruby": "ㄒㄧㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.563,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "星 ",
+          "start_ms": 41080,
+          "end_ms": 41380,
+          "ruby": "ㄒㄧㄥ",
+          "ruby_source": "auto",
+          "confidence": 0.885,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "慢",
+          "start_ms": 41380,
+          "end_ms": 41710,
+          "ruby": "ㄇㄢˋ",
+          "ruby_source": "auto",
+          "confidence": 1.0,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "慢",
+          "start_ms": 41710,
+          "end_ms": 42340,
+          "ruby": "ㄇㄢˋ",
+          "ruby_source": "auto",
+          "confidence": 0.999,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "亮",
+          "start_ms": 42340,
+          "end_ms": 43000,
+          "ruby": "ㄌㄧㄤˋ",
+          "ruby_source": "auto",
+          "confidence": 0.822,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "起",
+          "start_ms": 43000,
+          "end_ms": 43420,
+          "ruby": "ㄑㄧˇ",
+          "ruby_source": "auto",
+          "confidence": 0.977,
+          "locked": false,
+          "source": "auto"
+        },
+        {
+          "text": "來",
+          "start_ms": 43420,
+          "end_ms": 44590,
+          "ruby": "ㄌㄞˊ",
+          "ruby_source": "auto",
+          "confidence": 0.902,
+          "locked": false,
+          "source": "auto"
+        }
+      ],
+      "time_hint": null
+    }
+  ],
+  "style": {
+    "theme": "classic-ktv",
+    "overrides": {}
+  },
+  "render": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "fps": 30.0,
+    "background": {
+      "type": "video",
+      "color": null,
+      "image": null
+    }
+  }
+}

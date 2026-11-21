@@ -115,7 +115,7 @@ def _download_file(
                     offset = 0  # the server ignored the range: start over
                 elif response.status_code not in (200, 206):
                     raise ModelError(
-                        f"下載模型檔失敗(HTTP {response.status_code}):{file.path}",
+                        f"下載模型檔失敗（HTTP {response.status_code}）：{file.path}",
                         f"Model download failed (HTTP {response.status_code}): {file.path}",
                         detail=file.url,
                     )
@@ -130,9 +130,9 @@ def _download_file(
                             progress(min(1.0, (done_before + received) / total), label)
         except httpx.HTTPError as exc:
             raise ModelError(
-                f"下載模型檔時連線失敗:{file.path}",
+                f"下載模型檔時連線失敗：{file.path}",
                 f"Network error while downloading {file.path}",
-                hint_zh="請檢查網路後重試;已下載的部分會保留,下次會從中斷處續傳。",
+                hint_zh="請檢查網路後重試；已下載的部分會保留，下次會從中斷處續傳。",
                 hint_en="Check your connection and retry; the partial download is kept "
                 "and will be resumed.",
                 detail=f"{type(exc).__name__}: {exc}",
@@ -141,9 +141,9 @@ def _download_file(
     if actual != file.sha256:
         partial.unlink(missing_ok=True)
         raise ModelError(
-            f"模型檔的檢查碼不符,已刪除:{file.path}",
+            f"模型檔的檢查碼不符，已刪除：{file.path}",
             f"Checksum mismatch for {file.path}; the file was deleted.",
-            hint_zh="請重新下載。如果問題持續,上游檔案可能已經變動,請回報。",
+            hint_zh="請重新下載。如果問題持續，上游檔案可能已經變動，請回報。",
             hint_en="Please download again. If this persists the upstream file may have changed.",
             detail=f"expected {file.sha256}, got {actual}",
         )
@@ -179,17 +179,17 @@ def download(
         return model_dir(spec)
     if offline():
         raise ModelError(
-            f"缺少模型「{spec.id}」,而且目前是離線模式(KARAFORGE_OFFLINE)。",
+            f"缺少模型「{spec.id}」，而且目前是離線模式（KARAFORGE_OFFLINE）。",
             f"Model '{spec.id}' is missing and offline mode (KARAFORGE_OFFLINE) is on.",
-            hint_zh=f"連上網路後執行:kf models download {spec.id}",
+            hint_zh=f"連上網路後執行：kf models download {spec.id}",
             hint_en=f"Go online and run: kf models download {spec.id}",
         )
     if not license_accepted(spec):
         raise ModelError(
-            f"模型「{spec.id}」的授權是 {spec.license},不允許商業使用,需要你明確同意後才會下載。",
+            f"模型「{spec.id}」的授權是 {spec.license}，不允許商業使用，需要你明確同意後才會下載。",
             f"Model '{spec.id}' is licensed {spec.license} (no commercial use); "
             "it is only downloaded after you accept that.",
-            hint_zh=f"閱讀授權({spec.license_url})後執行:"
+            hint_zh=f"閱讀授權（{spec.license_url}）後執行："
             f"kf models download {spec.id} --accept-license",
             hint_en=f"Read the licence ({spec.license_url}), then run: "
             f"kf models download {spec.id} --accept-license",

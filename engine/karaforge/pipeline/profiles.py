@@ -157,9 +157,9 @@ class Profile(_Settings):
 
 def _unknown_setting(key: str) -> PipelineError:
     return PipelineError(
-        f"沒有這個處理設定:{key}",
+        f"沒有這個處理設定：{key}",
         f"Unknown processing setting: {key}",
-        hint_zh="可用的設定見 docs/profiles.md,格式為 區段.名稱=值,例如 align.onset_snap_ms=80。",
+        hint_zh="可用的設定見 docs/profiles.md，格式為 區段.名稱=值，例如 align.onset_snap_ms=80。",
         hint_en="See docs/profiles.md; the format is section.name=value, "
         "e.g. align.onset_snap_ms=80.",
     )
@@ -198,9 +198,9 @@ def get_profile(name: str = DEFAULT_PROFILE) -> Profile:
     profiles = _builtin()
     if name not in profiles:
         raise PipelineError(
-            f"沒有這個處理品質設定檔:{name}",
+            f"沒有這個處理品質設定檔：{name}",
             f"Unknown profile: {name}",
-            hint_zh=f"可用的設定檔:{'、'.join(profiles)}",
+            hint_zh=f"可用的設定檔：{'、'.join(profiles)}",
             hint_en=f"Available profiles: {', '.join(profiles)}",
         )
     return profiles[name]
@@ -216,9 +216,9 @@ def parse_overrides(items: list[str]) -> dict[str, Any]:
         key, separator, raw = item.partition("=")
         if not separator or not key.strip():
             raise PipelineError(
-                f"設定的格式不正確:{item}",
+                f"設定的格式不正確：{item}",
                 f"Malformed setting: {item}",
-                hint_zh="格式為 區段.名稱=值,例如 align.aligner=ctc。",
+                hint_zh="格式為 區段.名稱=值，例如 align.aligner=ctc。",
                 hint_en="Use section.name=value, e.g. align.aligner=ctc.",
             )
         overrides[key.strip()] = _parse_value(raw.strip())

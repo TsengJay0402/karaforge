@@ -1,0 +1,11 @@
+# title: 雨後的星空
+# artist: KaraForge 合成歌聲
+# lyricist: KaraForge contributors
+# composer: kfbench（程式合成）
+# language: zh-TW
+
+[男] 車窗上的雨滴 排成一條線
+夜空裡的星星 慢慢亮起來
+
+山谷裡傳來遙遠的回音
+夜空裡的星星 慢慢亮起來

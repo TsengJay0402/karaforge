@@ -22,7 +22,7 @@ def _unknown(kind_zh: str, kind_en: str, name: str, options: tuple[str, ...]) ->
     return PipelineError(
         f"沒有這個{kind_zh}:{name}",
         f"Unknown {kind_en}: {name}",
-        hint_zh=f"可用的選項:{'、'.join(options)}",
+        hint_zh=f"可用的選項：{'、'.join(options)}",
         hint_en=f"Available: {', '.join(options)}",
     )
 

@@ -113,7 +113,7 @@ class IngestStage(Stage):
         audio, rate = read_wav(out_dir / "audio.wav")
         if audio.shape[0] < rate // 2:
             raise MediaError(
-                f"「{source.name}」的音訊太短(不到半秒)。",
+                f"「{source.name}」的音訊太短（不到半秒）。",
                 f"The audio of '{source.name}' is shorter than half a second.",
             )
         ctx.progress(0.9, "計算波形 / computing waveform")

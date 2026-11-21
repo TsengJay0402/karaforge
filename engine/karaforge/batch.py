@@ -60,7 +60,7 @@ def plan_batch(folder: Path) -> BatchPlan:
     """
     if not folder.is_dir():
         raise MediaError(
-            f"找不到資料夾:{folder}",
+            f"找不到資料夾：{folder}",
             f"Not a folder: {folder}",
             hint_zh="kf batch 需要一個放著歌曲與歌詞檔的資料夾。",
             hint_en="kf batch needs a folder that holds the songs and their lyrics files.",

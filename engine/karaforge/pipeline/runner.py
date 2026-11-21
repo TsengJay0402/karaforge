@@ -112,9 +112,9 @@ class PipelineRunner:
             return self._stages[name]
         except KeyError:
             raise PipelineError(
-                f"沒有這個處理階段:{name}",
+                f"沒有這個處理階段：{name}",
                 f"Unknown stage: {name}",
-                hint_zh=f"可用的階段:{'、'.join(self._order)}",
+                hint_zh=f"可用的階段：{'、'.join(self._order)}",
                 hint_en=f"Available stages: {', '.join(self._order)}",
             ) from None
 
@@ -302,7 +302,7 @@ class PipelineRunner:
             raise PipelineError(
                 f"階段「{stage.title_zh or stage.name}」發生未預期的錯誤。",
                 f"Stage '{stage.title_en or stage.name}' failed unexpectedly.",
-                hint_zh="加上 --verbose 可以看到詳細的錯誤內容;如果問題持續,請回報這段訊息。",
+                hint_zh="加上 --verbose 可以看到詳細的錯誤內容；如果問題持續，請回報這段訊息。",
                 hint_en="Re-run with --verbose for details; please report this if it persists.",
                 detail=f"{type(exc).__name__}: {exc}",
             ) from exc

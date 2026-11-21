@@ -163,7 +163,7 @@ def require_libass(tools: FFmpegTools | None = None) -> None:
     """Raise :class:`ToolMissingError` when ffmpeg was built without libass."""
     if not capabilities(tools).has_libass:
         raise ToolMissingError(
-            "這個 ffmpeg 沒有內建 libass,無法燒錄 KTV 字幕。",
+            "這個 ffmpeg 沒有內建 libass，無法燒錄 KTV 字幕。",
             "This ffmpeg build lacks libass, which is required to burn in karaoke subtitles.",
             hint_zh=_INSTALL_HINT_ZH,
             hint_en=_INSTALL_HINT_EN,
@@ -311,7 +311,7 @@ def probe(path: Path, tools: FFmpegTools | None = None) -> MediaInfo:
     resolved = tools or find_tools()
     if not path.is_file():
         raise MediaError(
-            f"找不到媒體檔:{path}",
+            f"找不到媒體檔：{path}",
             f"Media file not found: {path}",
         )
     command = [
@@ -328,7 +328,7 @@ def probe(path: Path, tools: FFmpegTools | None = None) -> MediaInfo:
         raw = _run_text(command)
     except FFmpegError as exc:
         raise MediaError(
-            f"無法讀取媒體檔:{path.name}。檔案可能損毀,或不是支援的影音格式。",
+            f"無法讀取媒體檔：{path.name}。檔案可能損毀，或不是支援的影音格式。",
             f"Cannot read media file: {path.name}. It may be corrupt or not an audio/video file.",
             detail=exc.detail,
         ) from exc

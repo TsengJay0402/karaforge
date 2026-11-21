@@ -119,12 +119,12 @@ def run_alignment(
         raise AlignmentError(
             "沒有可以對齊的歌詞。",
             "There are no lyrics to align.",
-            hint_zh="請先加入歌詞,或用「沒有歌詞,用 AI 辨識」產生草稿。",
+            hint_zh="請先加入歌詞，或用「沒有歌詞，用 AI 辨識」產生草稿。",
             hint_en="Add lyrics first, or let speech recognition draft them.",
         )
     duration = audio.size / MODEL_RATE
     if duration <= 0.0:
-        raise AlignmentError("人聲軌是空的,無法對齊。", "The vocal stem is empty.")
+        raise AlignmentError("人聲軌是空的，無法對齊。", "The vocal stem is empty.")
     seconds: dict[str, float] = {}
 
     started = time.monotonic()

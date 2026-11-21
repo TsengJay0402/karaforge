@@ -39,18 +39,20 @@ class ExportFormat:
 FORMATS: dict[str, ExportFormat] = {
     item.id: item
     for item in (
-        ExportFormat("mp4", ".mp4", True, "MP4 影片(字幕燒進畫面)", "MP4 video, burned-in lyrics"),
+        ExportFormat(
+            "mp4", ".mp4", True, "MP4 影片（字幕燒進畫面）", "MP4 video, burned-in lyrics"
+        ),
         ExportFormat(
             "mkv",
             ".mkv",
             True,
-            "MKV 影片(軟字幕、雙音軌)",
+            "MKV 影片（軟字幕、雙音軌）",
             "MKV video, soft subtitles, two audio tracks",
         ),
         ExportFormat("ass", ".ass", False, "ASS 字幕", "ASS subtitles"),
-        ExportFormat("lrc", ".lrc", False, "LRC 歌詞(逐行)", "LRC lyrics (line timed)"),
+        ExportFormat("lrc", ".lrc", False, "LRC 歌詞（逐行）", "LRC lyrics (line timed)"),
         ExportFormat(
-            "elrc", ".enhanced.lrc", False, "增強型 LRC(逐字)", "Enhanced LRC (word timed)"
+            "elrc", ".enhanced.lrc", False, "增強型 LRC（逐字）", "Enhanced LRC (word timed)"
         ),
         ExportFormat("srt", ".srt", False, "SRT 字幕", "SRT subtitles"),
         ExportFormat(
@@ -88,9 +90,9 @@ def get_format(name: str) -> ExportFormat:
     found = FORMATS.get(name.strip().lower())
     if found is None:
         raise ExportError(
-            f"不支援的匯出格式:{name}",
+            f"不支援的匯出格式：{name}",
             f"Unsupported export format: {name}",
-            hint_zh="可用:" + "、".join(FORMATS) + "。",
+            hint_zh="可用：" + "、".join(FORMATS) + "。",
             hint_en="Available: " + ", ".join(FORMATS) + ".",
         )
     return found
@@ -186,9 +188,9 @@ def _video_options(project: Project, request: ExportRequest, fmt: ExportFormat) 
     kind = (request.background or project.render.background.type).lower()
     if kind not in BACKGROUNDS:
         raise ExportError(
-            f"看不懂的背景選項:{kind}",
+            f"看不懂的背景選項：{kind}",
             f"Unrecognised background: {kind}",
-            hint_zh="可用:" + "、".join(BACKGROUNDS) + "。",
+            hint_zh="可用：" + "、".join(BACKGROUNDS) + "。",
             hint_en="Use one of: " + ", ".join(BACKGROUNDS) + ".",
         )
     return VideoOptions(

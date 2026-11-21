@@ -7,7 +7,11 @@ English: [README.en.md](README.en.md)
 
 ![編輯器：左邊是與匯出一致的預覽，右邊是歌詞，下方是可以拖曳每個字的時間軸](docs/images/editor.png)
 
-![主題面板：調整字型、位置、顏色與讀音](docs/images/editor-theme.png)
+| 匯出的影片：片頭資訊卡與倒數提示 | 唱到的字連外框一起變色 | 注音學習主題 |
+|---|---|---|
+| ![片頭卡顯示歌名與作者，第一行歌詞上方有倒數圓點](docs/images/demo-frame-title.png) | ![兩行歌詞，唱過的字變成藍色白框](docs/images/demo-frame.png) | ![每個字上方顯示注音](docs/images/demo-frame-zhuyin.png) |
+
+以上三張是 [`examples/demo/`](examples/) 的影片影格：一首程式合成的歌，全自動處理，沒有手動修過。
 
 ## 它能做什麼
 
@@ -179,7 +183,7 @@ uv run kf batch ./songs/ --out ./exports/    # 資料夾裡同名的歌與歌詞
 | [授權清單](docs/LICENSES.md) | [設計決策紀錄（ADR）](docs/adr/) |
 | [開發進度與驗證紀錄](PROGRESS.md) | [更新紀錄](CHANGELOG.md) |
 
-示範專案與影片（`examples/`）與最終報告（`REPORT.md`）**尚未產生**，目前的狀態見 [PROGRESS.md](PROGRESS.md)。
+示範專案與影片在 [`examples/`](examples/)。
 
 ## 版權提醒
 

@@ -26,7 +26,7 @@ from karaforge.runtime import ProgressFn
 
 app = typer.Typer(
     name="kf",
-    help="KaraForge:把歌曲與歌詞變成 KTV 影片 / turn a song and its lyrics into a karaoke video.",
+    help="KaraForge：把歌曲與歌詞變成 KTV 影片 / turn a song and its lyrics into a karaoke video.",
     no_args_is_help=True,
     add_completion=False,
     pretty_exceptions_enable=False,
@@ -82,15 +82,15 @@ def _root(
 def report_error(error: KaraForgeError, *, verbose: bool = False) -> None:
     """Print a user-facing error message to stderr."""
     lang = current_lang()
-    label = "錯誤" if lang == "zh" else "Error"
-    err_console.print(f"[bold red]{label}:[/bold red] {error.user_message(lang)}", highlight=False)
+    label = "錯誤：" if lang == "zh" else "Error: "
+    err_console.print(f"[bold red]{label}[/bold red]{error.user_message(lang)}", highlight=False)
     if error.detail:
         if verbose:
             err_console.print(f"[dim]{error.detail}[/dim]", highlight=False, markup=False)
         else:
             err_console.print(
                 pick(
-                    "[dim](加上 --verbose 看詳細內容)[/dim]",
+                    "[dim]（加上 --verbose 看詳細內容）[/dim]",
                     "[dim](add --verbose for details)[/dim]",
                 )
             )
@@ -111,9 +111,9 @@ def open_project(path: Path) -> ProjectStore:
     store = ProjectStore(path)
     if not store.exists():
         raise ProjectError(
-            f"找不到專案:{path}",
+            f"找不到專案：{path}",
             f"Not a KaraForge project: {path}",
-            hint_zh="請指定 .kfproj 資料夾,或先用 `kf new` 建立專案。",
+            hint_zh="請指定 .kfproj 資料夾，或先用 `kf new` 建立專案。",
             hint_en="Pass a .kfproj folder, or create one with `kf new`.",
         )
     return store
@@ -134,9 +134,9 @@ def parse_resolution(value: str) -> tuple[int, int]:
         if size[0] >= 160 and size[1] >= 90 and size[0] % 2 == 0 and size[1] % 2 == 0:
             return size
     raise ExportError(
-        f"看不懂的解析度:{value}",
+        f"看不懂的解析度：{value}",
         f"Unrecognised resolution: {value}",
-        hint_zh="可用:" + "、".join(RESOLUTIONS) + ",或寬x高(偶數),例如 1920x1080。",
+        hint_zh="可用：" + "、".join(RESOLUTIONS) + "，或寬x高（偶數），例如 1920x1080。",
         hint_en="Use one of " + ", ".join(RESOLUTIONS) + " or WIDTHxHEIGHT (even numbers).",
     )
 
@@ -218,7 +218,11 @@ def new_command(
     media: Annotated[Path, typer.Argument(help="影片或音檔 / video or audio file.")],
     lyrics: Annotated[
         Path | None,
-        typer.Option("--lyrics", "-l", help="歌詞檔(.txt);省略則用語音辨識產生草稿 / lyrics file."),
+        typer.Option(
+            "--lyrics",
+            "-l",
+            help="歌詞檔（.txt、.lrc、.srt、.ass）；省略則用語音辨識產生草稿 / lyrics file.",
+        ),
     ] = None,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="專案資料夾 / project folder (.kfproj).")
@@ -240,8 +244,8 @@ def new_command(
     project = store.load()
     console.print(
         pick(
-            f"已建立專案 [bold]{store.root}[/bold]({len(project.lines)} 行歌詞)。"
-            f"\n下一步:kf run {store.root}",
+            f"已建立專案 [bold]{store.root}[/bold]（{len(project.lines)} 行歌詞）。"
+            f"\n下一步：kf run {store.root}",
             f"Created project [bold]{store.root}[/bold] ({len(project.lines)} lyric lines)."
             f"\nNext: kf run {store.root}",
         )
@@ -276,8 +280,8 @@ def _print_summary(store: ProjectStore, report: RunReport) -> None:
     doubtful = [token for token in timed if (token.confidence or 0.0) < 0.5 and not token.locked]
     console.print(
         pick(
-            f"完成:{len(project.lines)} 行、{len(tokens)} 個字,已對齊 {len(timed)} 個;"
-            f"其中 {len(doubtful)} 個信心度偏低,建議在編輯器檢查。",
+            f"完成：{len(project.lines)} 行、{len(tokens)} 個字，已對齊 {len(timed)} 個;"
+            f"其中 {len(doubtful)} 個信心度偏低，建議在編輯器檢查。",
             f"Done: {len(project.lines)} lines, {len(tokens)} tokens, {len(timed)} aligned; "
             f"{len(doubtful)} have low confidence and are worth checking in the editor.",
         )
@@ -304,7 +308,7 @@ def export_command(
         str | None, typer.Option("--res", help="解析度 / resolution: 720p, 1080p, 1920x1080.")
     ] = None,
     background: Annotated[
-        str | None, typer.Option("--background", help="背景:video、color、image、blur。")
+        str | None, typer.Option("--background", help="背景：video、color、image、blur。")
     ] = None,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="輸出檔 / output file.")
@@ -323,7 +327,7 @@ def export_command(
         suffix = Path(media).suffix or ".mp3"
         console.print(
             pick(
-                f"[dim]請把歌曲的媒體檔放在同一個資料夾,並命名為 "
+                f"[dim]請把歌曲的媒體檔放在同一個資料夾，並命名為 "
                 f"{exported.name.removesuffix('.ultrastar.txt').removesuffix('.txt')}{suffix}[/dim]",
                 f"[dim]Put the song's media file next to it, named "
                 f"{exported.name.removesuffix('.ultrastar.txt').removesuffix('.txt')}{suffix}[/dim]",
@@ -376,7 +380,7 @@ def export_project(
 def auto_command(
     media: Annotated[Path, typer.Argument(help="影片或音檔 / video or audio file.")],
     lyrics: Annotated[
-        Path | None, typer.Argument(help="歌詞檔;省略則用語音辨識 / lyrics file (optional).")
+        Path | None, typer.Argument(help="歌詞檔；省略則用語音辨識 / lyrics file (optional).")
     ] = None,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="輸出影片 / output video.")
@@ -405,7 +409,7 @@ def auto_command(
     )
     _run(store, resolve_profile(profile, settings), targets=PROCESS_TARGETS)
     exported = export_project(store, audio=audio, res=res, output=target, profile=profile)
-    console.print(pick(f"完成:[bold]{exported}[/bold]", f"Done: [bold]{exported}[/bold]"))
+    console.print(pick(f"完成：[bold]{exported}[/bold]", f"Done: [bold]{exported}[/bold]"))
 
 
 @app.command("align")
@@ -415,12 +419,12 @@ def align_command(
         bool,
         typer.Option(
             "--respect-locked/--ignore-locked",
-            help="保留已鎖定的字作為錨點(預設)/ keep locked tokens as anchors (default).",
+            help="保留已鎖定的字作為錨點（預設）/ keep locked tokens as anchors (default).",
         ),
     ] = True,
     line: Annotated[
         list[int] | None,
-        typer.Option("--line", help="只重新對齊這幾行(從 1 起算,可重複)/ only these lines."),
+        typer.Option("--line", help="只重新對齊這幾行（從 1 起算，可重複）/ only these lines."),
     ] = None,
     profile: ProfileOption = DEFAULT_PROFILE,
     settings: SetOption = None,
@@ -438,7 +442,7 @@ def align_command(
     if invalid:
         raise ProjectError(
             f"沒有第 {'、'.join(str(number) for number in invalid)} 行"
-            f"(這個專案有 {len(document.lines)} 行)。",
+            f"（這個專案有 {len(document.lines)} 行）。",
             f"No such line: {', '.join(str(number) for number in invalid)} "
             f"(the project has {len(document.lines)} lines).",
         )
@@ -452,7 +456,7 @@ def align_command(
         store.save(document)
         console.print(
             pick(
-                f"已解除 {locked} 個鎖定(上一版存在 project.json.bak)。",
+                f"已解除 {locked} 個鎖定（上一版存在 project.json.bak）。",
                 f"Released {locked} locked tokens (the previous version is in project.json.bak).",
             )
         )
@@ -523,7 +527,7 @@ def batch_command(
     for path in plan.duplicates:
         console.print(
             pick(
-                f"[yellow]略過 {path.name}:同名的媒體檔已經有一個。[/yellow]",
+                f"[yellow]略過 {path.name}：同名的媒體檔已經有一個。[/yellow]",
                 f"[yellow]Skipping {path.name}: another media file has the same name.[/yellow]",
             )
         )
@@ -538,7 +542,7 @@ def batch_command(
         raise ProjectError(
             f"{folder} 裡沒有可以處理的媒體檔。",
             f"No media files to process in {folder}.",
-            hint_zh="把歌曲(mp3、wav、mp4…)和同名的歌詞檔(.txt、.lrc…)放進資料夾。",
+            hint_zh="把歌曲（mp3、wav、mp4…）和同名的歌詞檔（.txt、.lrc…）放進資料夾。",
             hint_en="Put songs (mp3, wav, mp4, …) and same-named lyrics (.txt, .lrc, …) in it.",
         )
 
@@ -559,8 +563,8 @@ def batch_command(
             entry["reason"] = pick("沒有歌詞檔", "no lyrics file")
             console.print(
                 pick(
-                    "  [yellow]沒有同名的歌詞檔,略過"
-                    "(加上 --transcribe 可用語音辨識產生草稿)。[/yellow]",
+                    "  [yellow]沒有同名的歌詞檔，略過"
+                    "（加上 --transcribe 可用語音辨識產生草稿）。[/yellow]",
                     "  [yellow]No lyrics file of the same name; skipped "
                     "(--transcribe drafts them by speech recognition).[/yellow]",
                 )
@@ -630,7 +634,7 @@ def batch_command(
             ),
             encoding="utf-8",
         )
-        console.print(pick(f"[dim]紀錄:{report_path}[/dim]", f"[dim]Report: {report_path}[/dim]"))
+        console.print(pick(f"[dim]紀錄：{report_path}[/dim]", f"[dim]Report: {report_path}[/dim]"))
     if failed:
         raise typer.Exit(1)
 
@@ -645,7 +649,7 @@ def serve_command(
         typer.Option(
             "--workspace",
             "-w",
-            help="放專案的資料夾(預設:目前的資料夾)/ folder that holds the projects.",
+            help="放專案的資料夾（預設：目前的資料夾）/ folder that holds the projects.",
         ),
     ] = None,
     host: Annotated[
@@ -676,14 +680,14 @@ def serve_command(
     address = f"http://{shown_host}:{port}"
     console.print(
         pick(
-            f"KaraForge 已啟動:[bold]{address}[/bold](專案資料夾:{root.resolve()})",
+            f"KaraForge 已啟動：[bold]{address}[/bold]（專案資料夾：{root.resolve()}）",
             f"KaraForge is running at [bold]{address}[/bold] (projects in {root.resolve()})",
         )
     )
     if not (static / "index.html").is_file():
         console.print(
             pick(
-                "[yellow]找不到已建置的前端,只提供 API。"
+                "[yellow]找不到已建置的前端，只提供 API。"
                 "請在 web/ 執行 npm ci && npm run build。[/yellow]",
                 "[yellow]The web app has not been built; only the API is served. "
                 "Run npm ci && npm run build in web/.[/yellow]",
@@ -692,7 +696,7 @@ def serve_command(
     if host not in ("127.0.0.1", "localhost", "::1"):
         console.print(
             pick(
-                "[yellow]注意:伺服器沒有登入機制,只應該在信任的網路上對外開放。[/yellow]",
+                "[yellow]注意：伺服器沒有登入機制，只應該在信任的網路上對外開放。[/yellow]",
                 "[yellow]Note: the server has no authentication; expose it only on a network "
                 "you trust.[/yellow]",
             )
@@ -714,14 +718,14 @@ def bench_command(
     profile: ProfileOption = DEFAULT_PROFILE,
     aligner: Annotated[
         list[str] | None,
-        typer.Option("--aligner", help="要比較的對齊器,可重複 / aligner(s) to compare."),
+        typer.Option("--aligner", help="要比較的對齊器，可重複 / aligner(s) to compare."),
     ] = None,
     settings: SetOption = None,
     language: Annotated[
-        list[str] | None, typer.Option("--language", help="zh、en、mixed(可重複)。")
+        list[str] | None, typer.Option("--language", help="zh、en、mixed（可重複）。")
     ] = None,
     snr: Annotated[
-        list[int] | None, typer.Option("--snr", help="訊噪比 dB(可重複)/ SNR levels.")
+        list[int] | None, typer.Option("--snr", help="訊噪比 dB（可重複）/ SNR levels.")
     ] = None,
     limit: Annotated[
         int | None,
@@ -739,9 +743,9 @@ def bench_command(
     """執行對齊評測並產生報告 / run the alignment benchmark and write a report."""
     if suite not in ("synthetic", "real"):
         raise ExportError(
-            f"沒有這個評測套件:{suite}",
+            f"沒有這個評測套件：{suite}",
             f"Unknown suite: {suite}",
-            hint_zh="可用:synthetic、real。",
+            hint_zh="可用：synthetic、real。",
             hint_en="Use synthetic or real.",
         )
     try:
@@ -752,7 +756,7 @@ def bench_command(
         raise DependencyMissingError(
             "評測工具的相依套件沒有安裝。",
             "The benchmark dependencies are not installed.",
-            hint_zh="請在原始碼目錄執行:uv sync --extra cpu --group bench",
+            hint_zh="請在原始碼目錄執行：uv sync --extra cpu --group bench",
             hint_en="From a source checkout run: uv sync --extra cpu --group bench",
             detail=str(exc),
         ) from exc
@@ -777,7 +781,7 @@ def ruby_command(
     project: Annotated[Path, typer.Argument(help="專案資料夾 / project folder.")],
     kind: Annotated[
         str | None,
-        typer.Option("--kind", "-k", help="zhuyin(注音)或 pinyin(拼音);省略則沿用目前的。"),
+        typer.Option("--kind", "-k", help="zhuyin（注音）或 pinyin（拼音）；省略則沿用目前的。"),
     ] = None,
     clear: Annotated[
         bool, typer.Option("--clear", help="移除自動讀音 / remove the automatic readings.")
@@ -801,18 +805,18 @@ def ruby_command(
     chosen = kind.strip().lower() if kind else None
     if chosen is not None and chosen not in KINDS:
         raise ProjectError(
-            f"沒有這種讀音:{kind}",
+            f"沒有這種讀音：{kind}",
             f"Unknown kind of reading: {kind}",
-            hint_zh="可用:zhuyin(注音)、pinyin(拼音)。",
+            hint_zh="可用：zhuyin（注音）、pinyin（拼音）。",
             hint_en="Use zhuyin or pinyin.",
         )
     resolved = chosen or kind_of(document.lines) or default_kind(document.meta.language)
     if resolved is None:
         raise ProjectError(
-            f"這個專案的語言是 {document.meta.language},不會自動產生國語讀音。",
+            f"這個專案的語言是 {document.meta.language}，不會自動產生國語讀音。",
             f"The project language is {document.meta.language}; Mandarin readings are not "
             "generated for it automatically.",
-            hint_zh="如果歌詞確實是國語,請加上 --kind zhuyin 或 --kind pinyin。",
+            hint_zh="如果歌詞確實是國語，請加上 --kind zhuyin 或 --kind pinyin。",
             hint_en="If the lyrics are Mandarin after all, pass --kind zhuyin or --kind pinyin.",
         )
     count = annotate_project(document, "zhuyin" if resolved == "zhuyin" else "pinyin")
@@ -821,13 +825,13 @@ def ruby_command(
     label = pick("注音", "zhuyin") if resolved == "zhuyin" else pick("拼音", "pinyin")
     console.print(
         pick(
-            f"已為 {count} 個字標上{label}(另有 {manual} 個手動讀音維持不變)。",
+            f"已為 {count} 個字標上{label}（另有 {manual} 個手動讀音維持不變）。",
             f"{count} characters now have {label} readings ({manual} manual readings were kept).",
         )
     )
     console.print(
         pick(
-            "[dim]破音字不一定正確(見 docs/ruby.md);可在歌詞裡用 字{讀音} 或在編輯器修正。"
+            "[dim]破音字不一定正確（見 docs/ruby.md）；可在歌詞裡用 字{讀音} 或在編輯器修正。"
             "顯示與否由主題的 ruby.enabled 決定。[/dim]",
             "[dim]Polyphonic characters may be wrong (see docs/ruby.md); correct them with "
             "char{reading} in the lyrics or in the editor.  The theme's ruby.enabled decides "
@@ -867,11 +871,11 @@ def doctor_command(
             {
                 "ok": pick("[green]一切就緒。[/green]", "[green]Everything is ready.[/green]"),
                 "warn": pick(
-                    "[yellow]可以使用,但有需要留意的地方。[/yellow]",
+                    "[yellow]可以使用，但有需要留意的地方。[/yellow]",
                     "[yellow]Usable, with the points marked ! above.[/yellow]",
                 ),
                 "fail": pick(
-                    "[red]有問題需要先解決(標示 ✗ 的項目)。[/red]",
+                    "[red]有問題需要先解決（標示 ✗ 的項目）。[/red]",
                     "[red]The items marked ✗ need fixing first.[/red]",
                 ),
             }[overall]
@@ -923,7 +927,7 @@ def models_list() -> None:
     console.print(table)
     console.print(
         pick(
-            "黃色授權代表不允許商業使用,下載時需要加上 --accept-license。",
+            "黃色授權代表不允許商業使用，下載時需要加上 --accept-license。",
             "A licence shown in yellow forbids commercial use; downloading needs --accept-license.",
         )
     )

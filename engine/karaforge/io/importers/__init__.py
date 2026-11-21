@@ -42,7 +42,7 @@ def load_lyrics(path: Path) -> ParsedLyrics:
     if extension in (".txt", ""):
         return parse_lyrics_file(path)
     raise LyricsFormatError(
-        f"不支援的歌詞檔格式:{path.name}",
+        f"不支援的歌詞檔格式：{path.name}",
         f"Unsupported lyrics format: {path.name}",
         hint_zh="支援 " + "、".join(LYRICS_EXTENSIONS) + "。",
         hint_en="Supported: " + ", ".join(LYRICS_EXTENSIONS) + ".",

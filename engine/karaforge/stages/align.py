@@ -134,7 +134,7 @@ class AlignStage(Stage):
             raise AlignmentError(
                 f"對齊器「{aligner.info.name}」不支援語言 {project.meta.language}。",
                 f"Aligner '{aligner.info.name}' does not support language {project.meta.language}.",
-                hint_zh="請換一個對齊器,例如 align.aligner=whisper-attn。",
+                hint_zh="請換一個對齊器，例如 align.aligner=whisper-attn。",
                 hint_en="Choose another aligner, e.g. align.aligner=whisper-attn.",
             )
         audio = read_mono(ctx.paths.media / "vocals.wav")

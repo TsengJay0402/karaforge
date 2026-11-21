@@ -126,9 +126,9 @@ def read_font(path: Path) -> FontFace:
             )
     except (TTLibError, OSError, KeyError, AttributeError) as exc:
         raise ThemeError(
-            f"無法讀取字型檔:{path.name}",
+            f"無法讀取字型檔：{path.name}",
             f"Cannot read font file: {path.name}",
-            hint_zh="支援 .ttf 與 .otf(不支援 .ttc 字型集合,請先拆成單一字型)。",
+            hint_zh="支援 .ttf 與 .otf（不支援 .ttc 字型集合，請先拆成單一字型）。",
             hint_en="Use .ttf or .otf files (.ttc collections are not supported).",
             detail=f"{type(exc).__name__}: {exc}",
         ) from exc
@@ -236,7 +236,7 @@ class FontLibrary:
         raise ThemeError(
             f"找不到字型「{name}」。",
             f"Font not found: {name}",
-            hint_zh=f"可用的字型:{available}。自備字型請放到 {paths.home_dir() / 'fonts'}。",
+            hint_zh=f"可用的字型：{available}。自備字型請放到 {paths.home_dir() / 'fonts'}。",
             hint_en=f"Available fonts: {', '.join(face.family for face in self.faces) or 'none'}. "
             f"Put your own fonts into {paths.home_dir() / 'fonts'}.",
         )

@@ -42,9 +42,9 @@ def load_whisper(model_id: str, device: DeviceChoice) -> Any:
             from faster_whisper import WhisperModel
         except ImportError as exc:
             raise DependencyMissingError(
-                "缺少 faster-whisper 套件,無法做語音辨識。",
+                "缺少 faster-whisper 套件，無法做語音辨識。",
                 "The faster-whisper package is missing; speech recognition is unavailable.",
-                hint_zh="請執行:uv sync --extra cpu",
+                hint_zh="請執行：uv sync --extra cpu",
                 hint_en="Run: uv sync --extra cpu",
                 detail=str(exc),
             ) from exc
@@ -84,7 +84,7 @@ class FasterWhisperTranscriber:
             languages=("*",),
             devices=("cpu", "cuda"),
             memory_mb=_MEMORY_MB.get(model_id, 1500),
-            description_zh=f"Whisper 語音辨識({spec.title})",
+            description_zh=f"Whisper 語音辨識（{spec.title}）",
             description_en=f"Whisper speech recognition ({spec.title})",
             models=(model_id,),
         )

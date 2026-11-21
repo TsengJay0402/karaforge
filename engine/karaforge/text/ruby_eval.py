@@ -89,7 +89,7 @@ def load_cases(path: Path) -> list[PolyphoneCase]:
             raise LyricsFormatError(
                 f"{path.name} 第 {number} 行的格式不對。",
                 f"Line {number} of {path.name} is malformed.",
-                hint_zh="格式:含有一個【字】的句子、Tab、預期讀音(如 hang2)。",
+                hint_zh="格式：含有一個【字】的句子、Tab、預期讀音（如 hang2）。",
                 hint_en="Expected: a phrase with one 【char】, a tab, the reading (e.g. hang2).",
                 detail=raw,
             )
