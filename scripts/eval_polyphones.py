@@ -2,7 +2,7 @@
 
 Usage::
 
-    uv run python scripts/eval_polyphones.py [test-set.tsv] [--failures]
+    python scripts/eval_polyphones.py [test-set.tsv] [--failures]
 
 Without an argument the set in ``tests/fixtures/polyphones/`` is used.  The numbers in
 ``docs/ruby.md`` are the output of this script.

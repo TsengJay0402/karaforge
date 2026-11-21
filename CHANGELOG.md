@@ -2,9 +2,9 @@
 
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本號依 [語意化版本](https://semver.org/lang/zh-TW/)。
 
-## [未發布] 準備中的 0.1.0
+## [0.1.0] - 2026-11-21
 
-尚未發布：版號仍是 `0.1.0.dev0`，Docker 映像、示範影片與最終報告還沒完成（見 [`PROGRESS.md`](PROGRESS.md)）。
+第一個版本。驗證範圍、完整的評測數據與已知限制見 [`REPORT.md`](REPORT.md)。
 
 ### 引擎
 
@@ -42,9 +42,15 @@
   `kf bench`（消融實驗、錨點實驗、對齊器比較）。結果在 [`docs/benchmark-report.md`](docs/benchmark-report.md)。
 - 破音字測試集（171 句）與量測腳本，結果在 [`docs/ruby.md`](docs/ruby.md)。
 
+### 授權
+
+- 以 `uv sync` 安裝的執行環境、Docker 映像與打包後的前端不含 GPL 或非商業授權的程式：間接相依 `diffq`（CC-BY-NC）、`soynlp`（GPL-3.0）、
+  `rvfc-polyfill`（GPL-3.0）都用不到，已排除。`scripts/scan_licenses.py` 與對應的單元測試會在這類套件再出現時失敗。
+  排除對 `pip install` 無效；評測工具（開發用）會安裝 GPL 套件。見 [`docs/LICENSES.md`](docs/LICENSES.md) 與 ADR 0012。
+
 ### 已知限制
 
-見 [`PROGRESS.md`](PROGRESS.md) 與各文件的對應章節。最重要的幾項：
+見 [`REPORT.md`](REPORT.md) 的第 3、4 節與各文件的對應章節。最重要的幾項：
 
 - 所有準確度數字都來自**合成**歌聲，真實歌曲上沒有量測過。
 - GPU（CUDA／MPS）、硬體編碼、macOS、Windows 都沒有實測。

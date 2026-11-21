@@ -59,11 +59,15 @@ git clone <這個儲存庫的網址> karaforge
 cd karaforge
 
 uv sync --extra cpu                 # 有 NVIDIA 顯示卡：改成 --extra cuda
+source .venv/bin/activate           # Windows：.venv\Scripts\activate
 (cd web && npm ci && npm run build) # 建置網頁介面（只用命令列的話可以跳過）
 
-uv run kf doctor                    # 檢查環境：ffmpeg、字型、運算裝置、缺哪些模型
-uv run kf models download           # 下載預設（balanced）需要的模型，約 2.2 GB
+kf doctor                           # 檢查環境：ffmpeg、字型、運算裝置、缺哪些模型
+kf models download                  # 下載預設（balanced）需要的模型，約 2.2 GB
 ```
+
+之後的指令都假設虛擬環境已經啟用（`kf` 找得到）。**請不要用 `uv run kf …`**：`uv run` 會先把環境同步回「沒有 `--extra`」的組合，
+也就是把 CPU 版的 PyTorch 換成好幾 GB 的 CUDA 版。真的要用就加 `--no-sync`。
 
 ffmpeg 的安裝方式：
 
@@ -81,25 +85,30 @@ ffmpeg 的安裝方式：
 ```bash
 git clone <這個儲存庫的網址> karaforge
 cd karaforge
-docker compose -f docker/docker-compose.yml up --build
+mkdir -p projects
+KARAFORGE_UID=$(id -u) KARAFORGE_GID=$(id -g) docker compose -f docker/docker-compose.yml up --build
 ```
 
-然後開啟 <http://127.0.0.1:8765>。專案存在目前資料夾的 `projects/`，模型存在具名的 volume 裡（第一次處理時下載，不會打包進映像）。
-有 NVIDIA 顯示卡與 nvidia-container-toolkit 的話：`docker compose -f docker/docker-compose.yml --profile gpu up --build karaforge-gpu`
-（CUDA 映像**沒有實際建置與測試過**）。
+然後開啟 <http://127.0.0.1:8765>。專案存在儲存庫根目錄的 `projects/`（先自己建立，才不會被 Docker 以 root 建立；
+`KARAFORGE_UID`／`KARAFORGE_GID` 讓容器用你的使用者身分寫入）。模型存在具名的 volume 裡，第一次處理時下載，不會打包進映像。
+映像大約 3.7 GB。
 
-在容器裡使用命令列：
+在容器裡使用命令列（把歌曲與歌詞放進 `projects/`）：
 
 ```bash
-docker compose -f docker/docker-compose.yml run --rm karaforge auto /data/projects/song.mp3 /data/projects/lyrics.txt
+KARAFORGE_UID=$(id -u) KARAFORGE_GID=$(id -g) docker compose -f docker/docker-compose.yml run --rm karaforge \
+  auto /data/projects/song.mp3 /data/projects/lyrics.txt -o /data/projects/song-ktv.mp4
 ```
+
+有 NVIDIA 顯示卡與 nvidia-container-toolkit 的話：`docker compose -f docker/docker-compose.yml --profile gpu up --build karaforge-gpu`。
+CUDA 映像（約 13 GB）可以建置，也能在沒有顯示卡的機器上啟動並退回 CPU；但**沒有在有顯示卡的機器上執行過**，GPU 推論是否正常我們不知道。
 
 ## 快速開始
 
 ### 一行指令
 
 ```bash
-uv run kf auto song.mp3 lyrics.txt -o song-ktv.mp4
+kf auto song.mp3 lyrics.txt -o song-ktv.mp4
 ```
 
 歌詞檔一行一句就可以（格式見 [docs/lyrics-format.md](docs/lyrics-format.md)）：
@@ -116,7 +125,7 @@ uv run kf auto song.mp3 lyrics.txt -o song-ktv.mp4
 ### 用網頁介面
 
 ```bash
-uv run kf serve --open
+kf serve --open
 ```
 
 1. 「新增專案」：拖進影片或音檔，貼上歌詞，選處理品質，開始。
@@ -130,11 +139,11 @@ uv run kf serve --open
 ### 分步驟的命令列
 
 ```bash
-uv run kf new song.mp4 --lyrics lyrics.txt -o my-song.kfproj
-uv run kf run my-song.kfproj                 # 分離、辨識、對齊（有快取，重跑很快）
-uv run kf export my-song.kfproj --format mkv # 軟字幕 + 伴唱／原唱雙音軌
-uv run kf export my-song.kfproj --format lrc
-uv run kf batch ./songs/ --out ./exports/    # 資料夾裡同名的歌與歌詞配對後全部處理
+kf new song.mp4 --lyrics lyrics.txt -o my-song.kfproj
+kf run my-song.kfproj                 # 分離、辨識、對齊（有快取，重跑很快）
+kf export my-song.kfproj --format mkv # 軟字幕 + 伴唱／原唱雙音軌
+kf export my-song.kfproj --format lrc
+kf batch ./songs/ --out ./exports/    # 資料夾裡同名的歌與歌詞配對後全部處理
 ```
 
 完整說明：[docs/cli.md](docs/cli.md)。
@@ -181,7 +190,7 @@ uv run kf batch ./songs/ --out ./exports/    # 資料夾裡同名的歌與歌詞
 | [對齊演算法](docs/alignment.md) | [評測方法](docs/benchmark.md)、[評測報告](docs/benchmark-report.md) |
 | [架構](docs/architecture.md) | [撰寫 adapter](docs/adapters.md) |
 | [授權清單](docs/LICENSES.md) | [設計決策紀錄（ADR）](docs/adr/) |
-| [開發進度與驗證紀錄](PROGRESS.md) | [更新紀錄](CHANGELOG.md) |
+| [最終報告](REPORT.md)（驗證了什麼、沒驗證什麼） | [更新紀錄](CHANGELOG.md) |
 
 示範專案與影片在 [`examples/`](examples/)。
 
@@ -194,6 +203,8 @@ KaraForge 不提供任何歌曲、影片或歌詞。**你必須自行確認擁�
 
 程式碼以 [Apache-2.0](LICENSE) 授權。內建字型是 SIL OFL 1.1。模型權重不隨專案散布，由使用者下載；
 預設用到的模型都允許商用，唯一的例外（`mms-fa`，CC-BY-NC）必須明確同意才會下載。瀏覽器預覽使用的 JASSUB 是 LGPL。
+依 README 用 `uv sync` 裝出來的執行環境與打包後的網頁介面不含 GPL 或非商業授權的程式——有三個間接相依為此被排除，
+而這個排除對 `pip install` 無效；開發用的評測工具則會安裝 GPL 套件。
 完整清單與說明：[docs/LICENSES.md](docs/LICENSES.md)。
 
 ## 開發
@@ -205,4 +216,4 @@ make test-all   # 全部測試（需要已下載的模型與 ffmpeg）
 (cd web && npm run e2e)   # 瀏覽器端對端測試（Playwright）
 ```
 
-這個專案的第一版是由 AI（Claude）依照一份規格從頭寫成的；開發過程、驗證了什麼、沒驗證什麼，都記錄在 [PROGRESS.md](PROGRESS.md)。
+這個專案的第一版是由 AI（Claude）依照一份規格從頭寫成的；開發過程、驗證了什麼、沒驗證什麼，都記錄在 [REPORT.md](REPORT.md)。

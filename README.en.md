@@ -81,11 +81,16 @@ git clone <repository-url> karaforge
 cd karaforge
 
 uv sync --extra cpu                 # with an NVIDIA card: --extra cuda
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
 (cd web && npm ci && npm run build) # build the web UI (skip it for CLI-only use)
 
-uv run kf doctor                    # checks ffmpeg, fonts, the compute device, missing models
-uv run kf models download           # models of the default profile (balanced), about 2.2 GB
+kf doctor                           # checks ffmpeg, fonts, the compute device, missing models
+kf models download                  # models of the default profile (balanced), about 2.2 GB
 ```
+
+Every command below assumes the virtual environment is active. **Do not use `uv run kf …`**:
+`uv run` first syncs the environment back to the set *without* `--extra`, which swaps the CPU
+build of PyTorch for the multi-gigabyte CUDA build. If you must, add `--no-sync`.
 
 Messages are in Traditional Chinese by default; set `KARAFORGE_LANG=en` for English. The web UI
 has a language switch.
@@ -101,19 +106,32 @@ lyrics into an MP4. Where system packages cannot be installed, ffmpeg can be wra
 ```bash
 git clone <repository-url> karaforge
 cd karaforge
-docker compose -f docker/docker-compose.yml up --build
+mkdir -p projects
+KARAFORGE_UID=$(id -u) KARAFORGE_GID=$(id -g) docker compose -f docker/docker-compose.yml up --build
 ```
 
-Then open <http://127.0.0.1:8765>. Projects live in `./projects`, models in a named volume
-(downloaded on first use, never part of the image). With an NVIDIA card and the
-nvidia-container-toolkit: `docker compose -f docker/docker-compose.yml --profile gpu up --build karaforge-gpu`
-(the CUDA image **has not been built or tested**).
+Then open <http://127.0.0.1:8765>. Projects live in `projects/` at the top of the checkout (create
+it yourself so that Docker does not create it as root; the two variables make the container write
+with your own user id). Models live in a named volume, downloaded on first use and never part of
+the image, which is about 3.7 GB.
+
+The CLI inside the container (put the song and its lyrics into `projects/`):
+
+```bash
+KARAFORGE_UID=$(id -u) KARAFORGE_GID=$(id -g) docker compose -f docker/docker-compose.yml run --rm karaforge \
+  auto /data/projects/song.mp3 /data/projects/lyrics.txt -o /data/projects/song-ktv.mp4
+```
+
+With an NVIDIA card and the nvidia-container-toolkit:
+`docker compose -f docker/docker-compose.yml --profile gpu up --build karaforge-gpu`.
+The CUDA image (about 13 GB) builds, and starts on a machine without a card, falling back to the CPU;
+it **has not been run on a machine with a GPU**, so we do not know whether GPU inference works.
 
 ## Quick start
 
 ```bash
-uv run kf auto song.mp3 lyrics.txt -o song-ktv.mp4      # one command
-uv run kf serve --open                                  # or the web UI
+kf auto song.mp3 lyrics.txt -o song-ktv.mp4      # one command
+kf serve --open                                  # or the web UI
 ```
 
 A lyrics file is one line per row (format: [docs/lyrics-format.md](docs/lyrics-format.md)):
@@ -135,10 +153,10 @@ After a few corrections press "Re-align"; then "Export".
 Step by step on the command line:
 
 ```bash
-uv run kf new song.mp4 --lyrics lyrics.txt -o my-song.kfproj
-uv run kf run my-song.kfproj                 # separate, recognise, align (cached)
-uv run kf export my-song.kfproj --format mkv # soft subtitles + karaoke / original audio
-uv run kf batch ./songs/ --out ./exports/    # pair same-named songs and lyrics in a folder
+kf new song.mp4 --lyrics lyrics.txt -o my-song.kfproj
+kf run my-song.kfproj                 # separate, recognise, align (cached)
+kf export my-song.kfproj --format mkv # soft subtitles + karaoke / original audio
+kf batch ./songs/ --out ./exports/    # pair same-named songs and lyrics in a folder
 ```
 
 Full reference: [docs/cli.md](docs/cli.md) (Chinese; the `--help` of every command is bilingual).
@@ -191,9 +209,8 @@ Most documentation is written in Traditional Chinese: [CLI](docs/cli.md) ·
 [profiles and settings](docs/profiles.md) · [readings](docs/ruby.md) ·
 [alignment algorithm](docs/alignment.md) · [benchmark](docs/benchmark.md) ·
 [architecture](docs/architecture.md) · [writing an adapter](docs/adapters.md) ·
-[licences](docs/LICENSES.md) · [decision records](docs/adr/) · [progress and verification log](PROGRESS.md) ·
-[changelog](CHANGELOG.md). The example project, demo videos and the final report (`REPORT.md`) have **not been
-produced yet**.
+[licences](docs/LICENSES.md) · [decision records](docs/adr/) · [final report](REPORT.md) ·
+[changelog](CHANGELOG.md). Example project and videos: [`examples/`](examples/).
 
 ## Copyright notice
 
@@ -206,7 +223,10 @@ videos. Distributing a karaoke video of a copyrighted song normally requires per
 Code: [Apache-2.0](LICENSE). Bundled fonts: SIL OFL 1.1. Model weights are not distributed with
 the project; the user downloads them. Every default model permits commercial use; the one
 exception (`mms-fa`, CC-BY-NC) is downloaded only after explicit consent. The browser preview
-uses JASSUB (LGPL). Details: [docs/LICENSES.md](docs/LICENSES.md).
+uses JASSUB (LGPL). The runtime environment that `uv sync` creates and the bundled web UI contain
+no GPL or non-commercial code — three transitive dependencies are excluded for that reason, and
+the exclusion does not apply to `pip install`; the benchmark tools (development only) do install
+GPL packages. Details: [docs/LICENSES.md](docs/LICENSES.md).
 
 The first version of this project was written from a specification by an AI (Claude). What was
-built, what was verified and what was not is recorded in [PROGRESS.md](PROGRESS.md).
+built, what was verified and what was not is recorded in [REPORT.md](REPORT.md).

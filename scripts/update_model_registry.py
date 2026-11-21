@@ -10,7 +10,7 @@ and records their sizes and SHA-256 checksums:
 
 Run it from the repository root whenever a model is added or bumped::
 
-    uv run python scripts/update_model_registry.py
+    python scripts/update_model_registry.py
 
 Existing entries are reused when their revision is unchanged, so re-running is cheap.
 """

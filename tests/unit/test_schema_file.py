@@ -21,7 +21,7 @@ def test_committed_json_schema_is_up_to_date(repo_root: Path) -> None:
     exporter = _load_exporter(repo_root)
     committed = (repo_root / "docs" / "project.schema.json").read_text(encoding="utf-8")
     expected: str = exporter.schema_text()  # type: ignore[attr-defined]
-    assert committed == expected, "run `uv run python scripts/export_schema.py`"
+    assert committed == expected, "run `python scripts/export_schema.py`"
 
 
 def test_schema_describes_the_documented_structure(repo_root: Path) -> None:

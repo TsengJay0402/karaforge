@@ -103,9 +103,9 @@ AdapterInfo(
 
    ```bash
    # 只用開發分組調整與校正
-   uv run python -m kfbench.tune --aligner my-aligner --grid align.lead_ms=-60,-30,0,30
+   python -m kfbench.tune --aligner my-aligner --grid align.lead_ms=-60,-30,0,30
    # 定案之後才跑測試分組，並與現有的對齊器並列
-   uv run kf bench --split test --aligner my-aligner
+   kf bench --split test --aligner my-aligner
    ```
 
    評測的規矩（不在測試分組上調參數、不改測試資料）寫在 [benchmark.md](benchmark.md)。

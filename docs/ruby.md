@@ -60,7 +60,7 @@ KaraForge 可以在每個中文字上方顯示小字的讀音：**注音**（預
 
 ### 結果
 
-執行 `uv run python scripts/eval_polyphones.py --failures` 可以重現（pypinyin 0.55.0、opencc-python-reimplemented 0.1.7，2026-11-21）：
+執行 `python scripts/eval_polyphones.py --failures` 可以重現（pypinyin 0.55.0、opencc-python-reimplemented 0.1.7，2026-11-21）：
 
 | 方法 | 正確 | 準確率 |
 |---|---:|---:|
@@ -105,7 +105,7 @@ KaraForge 可以在每個中文字上方顯示小字的讀音：**注音**（預
 測試集的格式很簡單（一行一題：含【字】的句子、Tab、帶數字聲調的拼音，輕聲寫 5），可以拿自己的清單來量：
 
 ```bash
-uv run python scripts/eval_polyphones.py my-list.tsv --failures
+python scripts/eval_polyphones.py my-list.tsv --failures
 ```
 
 ## 已知限制

@@ -36,6 +36,9 @@ ALL_SONGS = [
 ]
 
 
+BENCH_ONLY = "needs the benchmark tools (uv sync --extra cpu --group bench): the WORLD vocoder"
+
+
 def test_splits_are_disjoint_and_large_enough() -> None:
     assert len(SPLITS["test"]) == 10
     assert not set(SPLITS["test"]) & set(SPLITS["dev"])
@@ -182,6 +185,7 @@ def test_active_bounds_and_trimming() -> None:
 
 
 def test_note_rendering_sets_pitch_and_duration() -> None:
+    pytest.importorskip("pyworld", reason=BENCH_ONLY)
     rate = 24000
     clip = voiced_clip(0.4, rate, pitch=200.0)
     for midi, duration in ((57.0, 0.25), (62.0, 0.9), (50.0, 1.6)):
@@ -197,6 +201,7 @@ def test_note_rendering_sets_pitch_and_duration() -> None:
 
 
 def test_vibrato_modulates_the_pitch_of_long_notes() -> None:
+    pytest.importorskip("pyworld", reason=BENCH_ONLY)
     rate = 24000
     clip = voiced_clip(0.4, rate)
     plain = render_note(clip, rate, NoteSpec(midi=57.0, duration_s=1.2))

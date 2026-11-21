@@ -229,6 +229,18 @@ def test_check_device_reports_the_cpu_as_a_warning(monkeypatch: pytest.MonkeyPat
     check = doctor.check_device()
     assert check.status == "warn"
     assert "CPU" in check.message_en
+    assert "--extra cuda" in (check.hint_en or "")
+
+    # A CUDA build that finds no card points at the driver / container runtime instead.
+    import torch
+
+    monkeypatch.setattr(torch, "__version__", "2.14.1+cu126")
+    check = doctor.check_device()
+    assert check.status == "warn"
+    assert "nvidia-container-toolkit" in (check.hint_en or "")
+    assert "--extra cuda" not in (check.hint_en or "")
+    monkeypatch.undo()
+    monkeypatch.setattr(device, "resolve_device", cpu_only)
 
     def with_gpu(preference: str = "auto") -> DeviceChoice:
         return DeviceChoice("cuda", "Test GPU")

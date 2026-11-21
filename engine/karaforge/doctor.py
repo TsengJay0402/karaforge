@@ -147,18 +147,36 @@ def check_device() -> Check:
         )
     device = resolve_device("auto")
     if device.kind == "cpu":
+        if "+cu" in build:
+            # The CUDA build is installed and still nothing was found: the card or its driver
+            # is not visible (in a container: the runtime was not asked for the GPU).
+            hint_zh = (
+                "已經安裝 CUDA 版的 PyTorch，但找不到可用的顯示卡；請檢查驅動程式。"
+                "在 Docker 裡需要 nvidia-container-toolkit，"
+                "並以 --gpus all（或 compose 的 gpu profile）啟動。"
+            )
+            hint_en = (
+                "The CUDA build of PyTorch is installed but no card was found; check the driver. "
+                "In Docker this needs the nvidia-container-toolkit and --gpus all "
+                "(or the gpu profile of the compose file)."
+            )
+        else:
+            hint_zh = "CPU 可以完成所有工作，只是比較慢。有 NVIDIA 顯示卡時請安裝 --extra cuda。"
+            hint_en = (
+                "Everything works on a CPU, only slower. With an NVIDIA card install --extra cuda."
+            )
         return Check(
             "device",
             "warn",
             f"使用 CPU（{cpu_threads()} 個執行緒，PyTorch {build}）；沒有偵測到可用的 GPU。",
             f"Using the CPU ({cpu_threads()} threads, PyTorch {build}); no usable GPU was found.",
-            "CPU 可以完成所有工作，只是比較慢。有 NVIDIA 顯示卡時請安裝 --extra cuda。",
-            "Everything works on a CPU, only slower. With an NVIDIA card install --extra cuda.",
+            hint_zh,
+            hint_en,
         )
     return Check(
         "device",
         "ok",
-        f"使用 {device.kind.upper()}:{device.name}(PyTorch {build})",
+        f"使用 {device.kind.upper()}：{device.name}（PyTorch {build}）",
         f"Using {device.kind.upper()}: {device.name} (PyTorch {build})",
     )
 

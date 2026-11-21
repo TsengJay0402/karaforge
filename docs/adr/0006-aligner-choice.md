@@ -105,7 +105,7 @@ M2 實作了下列對齊器，並**只用評測的 dev 分組**（每種語言 4
 - **`gpu-quality` ＝ `auto`**：裝了 `qwen-asr` 就用 `hybrid`，否則退回 `ctc`（`kf doctor` 會提示）。
   `hybrid` 在 CPU 上也跑得動（Qwen 約每分鐘音訊 5 秒），想要更好的英文與混合語言結果的人可以在任何設定檔加上
   `--set align.aligner=hybrid`。
-- **Qwen 是選用套件（`uv sync --extra qwen`），不是核心相依。** `qwen-asr` 把 `transformers`、`accelerate` 釘在特定版本，
+- **Qwen 是選用套件（`uv sync --extra qwen`），不是核心相依。**（後記：它的相依 `soynlp` 是 GPL-3.0，已在安裝時排除，見 ADR 0012。） `qwen-asr` 把 `transformers`、`accelerate` 釘在特定版本，
   還會帶進 gradio、flask 等示範用的套件；放進核心相依會讓每個使用者都背這些限制。
   因為 lock 檔要同時滿足這個 extra，目前整個專案鎖定在 `transformers 4.57.6`。
 - **`ctc-mms` 不是任何設定檔的預設。** MMS 的權重是 CC-BY-NC，使用者必須用 `kf models download mms-fa --accept-license`

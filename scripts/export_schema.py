@@ -2,7 +2,7 @@
 
 Run after changing ``karaforge.project.schema``::
 
-    uv run python scripts/export_schema.py
+    python scripts/export_schema.py
 
 A unit test fails when the committed file is out of date.
 """

@@ -10,6 +10,9 @@ KaraForge 本身以 **Apache License 2.0** 釋出（見根目錄的 `LICENSE`）
   KaraForge 只是工具，請自行確認你有權使用素材。
 - **模型權重不隨程式散布**，是使用者執行 `kf models download`（或第一次處理時）才從原始出處下載的。
 - 預設會用到的模型都允許商業使用。唯一不允許的 `mms-fa`（CC-BY-NC-4.0）不在任何預設組合裡，必須明確加上 `--accept-license` 才會下載。
+- 以 `uv sync` 安裝的執行環境（預設安裝，以及選用的 `qwen` extra）沒有 GPL 或非商業授權的 Python 套件。
+  原本會被間接帶進來的三個——`diffq`（CC-BY-NC）、`soynlp`（GPLv3）與前端的 `rvfc-polyfill`（GPLv3）——KaraForge 都用不到，已經排除（見下方）。
+  只有開發時才用的評測工具會安裝 GPL 套件。
 - 瀏覽器預覽用的 JASSUB（libass 的 WebAssembly 版）是 **LGPL**；它以獨立、可替換的檔案形式隨前端提供，詳見下方說明。
 - ffmpeg 不隨 KaraForge 散布（由使用者安裝，或由 Docker 映像從 Debian 套件庫安裝）。
 
@@ -51,9 +54,49 @@ KaraForge 本身以 **Apache License 2.0** 釋出（見根目錄的 `LICENSE`）
 | ctranslate2、onnxruntime（由上面的套件帶入） | MIT |
 | torch | BSD-3-Clause 為主（中繼資料列為 Apache-2.0、BSD、MIT、BSL-1.0 等的組合） |
 | transformers、opencc-python-reimplemented、uharfbuzz、python-multipart | Apache-2.0 |
-| qwen-asr（選用，`--extra qwen`） | Apache-2.0 |
+| qwen-asr（選用，`--extra qwen`） | Apache-2.0（它的相依 `soynlp` 是 GPLv3，已排除，見下方） |
 
 以上都與 Apache-2.0 相容。KaraForge 沒有修改或內嵌其中任何一個的原始碼，只是把它們列為相依套件。
+
+### 刻意排除的間接相依
+
+手寫的清單只會列到想得到的套件。M6 建置 Docker 映像時才發現，核心相依裡藏著一個非商業授權的間接相依；
+之後把整個環境掃過一遍，又找到兩個 GPL 的。三個都是「被列為相依，但 KaraForge 走的路徑根本不會載入」的套件，所以直接排除：
+
+| 套件 | 授權 | 誰帶進來的 | 為什麼用不到 | 怎麼確認 |
+|---|---|---|---|---|
+| `diffq`（Windows 上是 `diffq-fixed`） | CC-BY-NC-4.0 | `audio-separator` | 只有 `audio-separator` 內附的 Demucs 程式碼會載入它；KaraForge 用的是 MDX-Net 模型 | 移除後跑完整條流程與 5 個真實模型的整合測試 |
+| `soynlp` | GPL-3.0 | `qwen-asr`（`qwen` extra） | 只有 `qwen-asr` 自己的韓文前處理會載入它；KaraForge 自己做斷詞，不呼叫那個函式 | 移除後以 `gpu-quality`（`hybrid` 對齊器）跑完整條流程；另外直接以韓文歌詞呼叫 Qwen 對齊器 |
+| `rvfc-polyfill`（npm） | GPL-3.0 | `jassub` | 它替沒有 `requestVideoFrameCallback` 的瀏覽器補上這個方法，而 JASSUB 只有在跟著 `<video>` 元素播放時才用得到；KaraForge 用的是畫布模式，自己告訴 JASSUB 每個影格的時間 | 排除後 14 個瀏覽器端對端測試（含預覽對匯出的畫面比對）與真實模型的完整流程通過 |
+
+排除的方式：
+
+- Python：`pyproject.toml` 的 `[tool.uv] override-dependencies`。用 `uv sync` 安裝（README 與 Docker 映像的做法）**不會**裝到它們，
+  也因此不需要 C 編譯器（`diffq` 沒有預編譯檔）。
+- 前端：`web/vite.config.ts` 把 `rvfc-polyfill` 換成一個空的模組，並且在打包結果裡出現它的程式碼時讓建置失敗。
+  它仍然會被 `npm ci` 下載到 `node_modules`，但不會進入 `web/dist`，也就不會隨 KaraForge 散布。
+
+**要注意：Python 的排除只對 uv 有效。** 如果改用 `pip install` 安裝相依套件，`diffq` 與 `soynlp` 會被裝進來；
+商業使用或再散布之前請自行移除（`pip uninstall diffq soynlp`）。
+
+### 整個環境的掃描
+
+`scripts/scan_licenses.py` 讀取環境裡每一個套件的授權中繼資料（`License`、`License-Expression`、classifier），列出不是寬鬆授權的、
+沒有填授權的，以及應該被排除卻裝著的套件；發現這份文件沒有交代的項目時會以錯誤結束。同一個檢查也是單元測試
+（`tests/unit/test_dependency_licences.py`），所以新增相依套件時如果帶進這類授權，測試會失敗。2026-11-21 的結果：
+
+| 安裝組合 | 套件數 | 掃描到的非寬鬆授權 |
+|---|---:|---|
+| 核心（`uv sync --extra cpu`，README 與 Docker 映像的安裝方式） | 114（不含開發工具是 98） | `soxr`：LGPL-2.1-or-later（`librosa` 用它重新取樣；以獨立套件動態載入，沒有修改） |
+| 加上選用的 `--extra qwen` | 139 | 同上，沒有其他 |
+| 加上評測工具 `--group bench`（只在開發時使用） | 166 | `phonemizer-fork`：**GPLv3+**；`espeakng-loader`：中繼資料沒有填，內含 GPLv3 的 espeak-ng 函式庫；`num2words`：LGPL。三個都是語音合成前處理 `misaki` 的相依 |
+
+前端以同樣的方式看過正式相依（`npm ls --omit=dev --all`，共 18 個套件）：15 個 MIT、1 個 Apache-2.0，加上 `jassub` 與上面已排除的 `rvfc-polyfill`。
+
+評測工具裡的 GPL 套件沒有排除：它們是產生合成測資時真的會用到的（Kokoro 的英文前處理以 espeak-ng 處理字典裡沒有的字），
+而且評測工具不是產品的一部分——不在預設安裝裡、不在 Docker 映像裡，只用來產生測資。用 GPL 程式產生的音訊不受 GPL 約束。
+
+這是依中繼資料做的機械式掃描：中繼資料寫錯、沒寫，或是套件裡夾帶了別的授權的程式碼，都掃不到。**不是法律稽核。**
 
 ### 只在開發與評測時使用（不是執行時相依）
 
@@ -62,8 +105,8 @@ KaraForge 本身以 **Apache License 2.0** 釋出（見根目錄的 `LICENSE`）
 | pytest、pytest-cov、ruff、pyright | MIT | 測試、lint、型別檢查 |
 | hypothesis | MPL-2.0 | 性質測試 |
 | httpx2、scipy-stubs | BSD-3-Clause | 測試用戶端、型別定義 |
-| kokoro、misaki | Apache-2.0 | 合成評測資料的語音合成（Kokoro-82M 模型權重亦為 Apache-2.0） |
-| pyworld | MIT（依其原始碼庫；套件中繼資料沒有填） | 合成評測資料的聲碼器 |
+| kokoro、misaki | Apache-2.0 | 合成評測資料的語音合成（Kokoro-82M 模型權重亦為 Apache-2.0）；`misaki` 會帶進 GPL 的 espeak-ng 相關套件，見上方的掃描 |
+| pyworld | MIT（套件內附授權檔；中繼資料的授權欄位沒有填） | 合成評測資料的聲碼器 |
 | en-core-web-sm（spaCy 模型） | MIT | misaki 的英文斷詞 |
 
 ## 前端（打包後隨程式散布）
@@ -73,7 +116,8 @@ KaraForge 本身以 **Apache License 2.0** 釋出（見根目錄的 `LICENSE`）
 | react、react-dom、react-router-dom、zustand、immer、@tanstack/react-query | MIT |
 | **jassub** 2.5.38 | **LGPL-2.1-or-later** AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0 |
 
-開發工具（vite、vitest、typescript、eslint、@playwright/test、testing-library…）是 MIT 或 Apache-2.0，不隨成品散布。
+`jassub` 相依的 `rvfc-polyfill`（GPL-3.0）不會進入打包結果，見上方「刻意排除的間接相依」。
+開發工具（vite、vitest、typescript、eslint、@playwright/test、testing-library…）不隨成品散布；它們的授權沒有逐一掃描。
 
 ### 關於 JASSUB 的 LGPL
 

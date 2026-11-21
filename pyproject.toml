@@ -1,6 +1,6 @@
 [project]
 name = "karaforge"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "KaraForge — open-source KTV karaoke video generator (align lyrics per character, edit, export)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -94,9 +94,41 @@ bench = [
 
 [tool.uv]
 conflicts = [[{ extra = "cpu" }, { extra = "cuda" }]]
+# Two transitive dependencies are left out on purpose, because of their licences.  A requirement
+# that can never apply removes a package from the environment.
+#
+# * diffq (CC-BY-NC-4.0, and it has to be compiled): a dependency of audio-separator, but only
+#   audio-separator's Demucs code imports it.  KaraForge uses the MDX-Net models and never
+#   loads that code.
+# * soynlp (GPL-3.0): a dependency of qwen-asr (the optional `qwen` extra), imported only by
+#   qwen-asr's own text preparation for Korean.  KaraForge tokenises the lyrics itself and
+#   never calls that function.
+#
+# Both were checked by running the pipeline with the package uninstalled; docs/LICENSES.md and
+# scripts/scan_licenses.py have the details.
+override-dependencies = [
+    "diffq ; sys_platform == 'never'",
+    "diffq-fixed ; sys_platform == 'never'",
+    "soynlp ; sys_platform == 'never'",
+]
 # torch 2.15.0 was published before a matching torchvision build existed on the PyTorch wheel
 # indexes; hold the lock at the last release with a complete, mutually compatible set.
 constraint-dependencies = ["torch<2.15"]
+
+# uv records the metadata of every package it locks, including the ones that are never
+# installed, and would have to build these two from source to learn it.  diffq-fixed cannot be
+# built at all (its source archive lacks the .pyx file its setup.py compiles), which makes
+# `uv lock` fail.  Stating the metadata here avoids the build; their own requirements do not
+# matter, since the packages are excluded above.
+[[tool.uv.dependency-metadata]]
+name = "diffq"
+version = "0.2.4"
+requires-dist = []
+
+[[tool.uv.dependency-metadata]]
+name = "diffq-fixed"
+version = "0.2.4"
+requires-dist = []
 
 [tool.uv.sources]
 torch = [
