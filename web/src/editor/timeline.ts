@@ -42,6 +42,17 @@ export function follow(view: View, timeMs: number, durationMs: number): View {
   return clampView({ ...view, startMs: timeMs - span * 0.25 }, durationMs)
 }
 
+/**
+ * The view that shows `timeMs`: unchanged when the time is already visible, otherwise moved so
+ * that it sits a quarter of the way in.  Used when the playhead jumps while paused (a token was
+ * clicked in the lyrics): unlike `follow` it never moves a view that already shows the time.
+ */
+export function reveal(view: View, timeMs: number, durationMs: number): View {
+  const span = visibleMs(view)
+  if (timeMs >= view.startMs && timeMs <= view.startMs + span) return view
+  return clampView({ ...view, startMs: timeMs - span * 0.25 }, durationMs)
+}
+
 export type HitPart = 'start' | 'end' | 'body'
 
 export interface Hit {
@@ -74,10 +85,16 @@ export function blocks(project: Project, view: View): Block[] {
   return result
 }
 
-/** Which token (and which part of it) is under the pointer. */
+/**
+ * Which token (and which part of it) is under the pointer.
+ *
+ * Where two tokens touch, their common boundary belongs to the *later* token's start: moving
+ * that start takes the end of the token before it along, which is what dragging a boundary
+ * should do.  Otherwise an edge beats a body, and the nearest one wins.
+ */
 export function hitTest(list: Block[], x: number, row: number): Hit | null {
   let best: Hit | null = null
-  let bestDistance = Number.POSITIVE_INFINITY
+  let bestRank = Number.POSITIVE_INFINITY
   for (const block of list) {
     if (block.row !== row || x < block.x - EDGE_PX / 2 || x > block.x + block.width + EDGE_PX / 2) continue
     const edge = Math.min(EDGE_PX, block.width / 3)
@@ -85,10 +102,16 @@ export function hitTest(list: Block[], x: number, row: number): Hit | null {
     if (x <= block.x + edge) part = 'start'
     else if (x >= block.x + block.width - edge) part = 'end'
     const centre = block.x + block.width / 2
-    const distance = Math.abs(x - centre)
-    if (distance < bestDistance) {
+    // Lower is better: starts before ends before bodies, then by distance.
+    const rank =
+      part === 'start'
+        ? Math.abs(x - block.x)
+        : part === 'end'
+          ? 1000 + Math.abs(x - (block.x + block.width))
+          : 2000 + Math.abs(x - centre)
+    if (rank < bestRank) {
       best = { ref: block.ref, part }
-      bestDistance = distance
+      bestRank = rank
     }
   }
   return best

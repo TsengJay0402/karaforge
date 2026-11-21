@@ -20,6 +20,7 @@ import {
   formatTime,
   type Hit,
   hitTest,
+  reveal,
   rulerStep,
   snapToOnset,
   timeToX,
@@ -250,14 +251,16 @@ export function Timeline() {
     return () => observer.disconnect()
   }, [])
 
-  // The playhead: redraw on every tick and keep it in view while playing.
+  // The playhead: redraw on every tick; keep it in view while playing, and bring it into view
+  // when it jumps while paused (a token was clicked in the lyrics, a key seeked).
   useEffect(
     () =>
       transport.subscribe((time, playing) => {
-        if (playing && drag.current === null) {
+        if (drag.current === null) {
           const state = latest.current
-          const followed = follow(state.view, time, Math.max(state.doc.meta.duration_ms, 1000))
-          if (followed !== state.view) setStartMs(followed.startMs)
+          const duration = Math.max(state.doc.meta.duration_ms, 1000)
+          const wanted = playing ? follow(state.view, time, duration) : reveal(state.view, time, duration)
+          if (wanted !== state.view) setStartMs(wanted.startMs)
         }
         draw()
       }),

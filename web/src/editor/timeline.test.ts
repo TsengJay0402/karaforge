@@ -6,6 +6,7 @@ import {
   follow,
   formatTime,
   hitTest,
+  reveal,
   rulerStep,
   snapToOnset,
   timeToX,
@@ -37,6 +38,19 @@ describe('time and pixels', () => {
   it('keeps the view inside the song', () => {
     expect(clampView({ ...view, startMs: -500 }, 60_000).startMs).toBe(0)
     expect(clampView({ ...view, startMs: 99_000 }, 60_000).startMs).toBe(56_000)
+  })
+
+  it('reveals a time that is out of view and leaves a visible one alone', () => {
+    // Visible: nothing moves, even right at the edge (unlike follow, which keeps a margin).
+    expect(reveal(view, 5000, 60_000)).toBe(view)
+    expect(reveal(view, view.startMs + 1, 60_000)).toBe(view)
+    expect(reveal(view, 9900, 60_000)).toBe(view)
+    // Out of view: the time ends up a quarter of the way in.
+    const later = reveal(view, 30_000, 60_000)
+    expect(later.startMs).toBe(30_000 - visibleMs(view) * 0.25)
+    expect(reveal({ ...view, startMs: 20_000 }, 1000, 60_000).startMs).toBe(0)
+    // Never further than the view is allowed to go at the end of the song.
+    expect(reveal(view, 59_900, 60_000).startMs).toBe(56_000)
   })
 
   it('follows the playhead only when it leaves the comfortable area', () => {
@@ -76,7 +90,12 @@ describe('token blocks', () => {
     const list = blocks(doc, view)
     expect(hitTest(list, 75, 0)).toEqual({ ref: { line: 0, index: 0 }, part: 'body' })
     expect(hitTest(list, 52, 0)).toEqual({ ref: { line: 0, index: 0 }, part: 'start' })
-    expect(hitTest(list, 148, 0)).toEqual({ ref: { line: 0, index: 1 }, part: 'end' })
+    // Where two tokens touch, the boundary is the start of the later one, from either side.
+    expect(hitTest(list, 148, 0)).toEqual({ ref: { line: 0, index: 2 }, part: 'start' })
+    expect(hitTest(list, 152, 0)).toEqual({ ref: { line: 0, index: 2 }, part: 'start' })
+    // The end of a token nothing follows on its row is its own.
+    expect(hitTest(list, 198, 0)).toEqual({ ref: { line: 0, index: 2 }, part: 'end' })
+    expect(hitTest(list, 296, 1)).toEqual({ ref: { line: 1, index: 0 }, part: 'end' })
     expect(hitTest(list, 250, 1)).toEqual({ ref: { line: 1, index: 0 }, part: 'body' })
     expect(hitTest(list, 250, 0)).toBeNull()
     expect(hitTest(list, 700, 1)).toBeNull()

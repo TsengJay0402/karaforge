@@ -58,20 +58,25 @@ test('upload, process with real models, edit and re-align', async ({ page, reque
   expect([...starts].sort((a, b) => a - b)).toEqual(starts)
   await expect(page.getByTestId('stats')).toContainText('43/43')
 
-  // Drag one token on the timeline: it moves and becomes a locked anchor.
+  // Drag the start of one token on the timeline (the usual correction: "this character begins
+  // a little later"): it moves, becomes a locked anchor, and the token before it ends there.
   const before = aligned.lines[1]!.tokens[4]!
-  await page.getByTestId('token-1-4').click()
-  const from = await timelinePoint(page, ((before.start_ms ?? 0) + (before.end_ms ?? 0)) / 2, 1)
+  await page.getByTestId('token-1-4').click() // also brings it into view on the timeline
+  const from = await timelinePoint(page, before.start_ms ?? 0, 1)
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
-  await page.mouse.move(from.x + 12, from.y, { steps: 3 })
-  await page.mouse.move(from.x + 24, from.y, { steps: 3 })
+  await page.mouse.move(from.x + 5, from.y, { steps: 2 })
+  await page.mouse.move(from.x + 10, from.y, { steps: 2 })
   await page.mouse.up()
   await waitSaved(page)
-  const dragged = (await serverProject(request, id)).lines[1]!.tokens[4]!
+  const afterDrag = (await serverProject(request, id)).lines[1]!
+  const dragged = afterDrag.tokens[4]!
   expect(dragged.locked).toBe(true)
   expect(dragged.source).toBe('manual')
   expect(dragged.start_ms).toBeGreaterThan(before.start_ms ?? 0)
+  expect(dragged.start_ms).toBeLessThan(before.end_ms ?? 0)
+  expect(dragged.end_ms).toBe(before.end_ms)
+  expect(afterDrag.tokens[3]!.end_ms).toBeLessThanOrEqual(dragged.start_ms ?? 0)
 
   // Re-align: the editor is read-only meanwhile, then takes the new times.
   await page.getByRole('button', { name: '重新對齊' }).click()

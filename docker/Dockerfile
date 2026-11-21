@@ -25,6 +25,12 @@ FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 FROM python:${PYTHON_VERSION}-slim-trixie AS builder
 ARG VARIANT=cpu
 COPY --from=uv /uv /usr/local/bin/uv
+# diffq (pulled in by audio-separator) publishes no wheels and compiles a small C extension,
+# so the build stage needs a compiler; the runtime stage only receives the finished venv.
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
