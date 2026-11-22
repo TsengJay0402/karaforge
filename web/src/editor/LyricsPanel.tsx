@@ -188,6 +188,7 @@ function Inspector() {
   const selection = useEditorState((state) => state.selection)
   const doc = useEditorState((state) => state.history.present)
   const readOnly = useEditorState((state) => state.readOnly)
+  const allowOverlap = useEditorState((state) => state.allowOverlap)
   const ref = selection.length === 1 ? selection[0] : undefined
   const token = ref ? tokenAt(doc, ref) : undefined
   const edit = store.getState().edit
@@ -218,7 +219,10 @@ function Inspector() {
               onChange={(event) => {
                 const value = Number(event.target.value)
                 if (event.target.value !== '' && Number.isFinite(value)) {
-                  edit((draft) => setTokenStart(draft, ref, value), { label: 'start', mergeKey: 'type-start' })
+                  edit((draft) => setTokenStart(draft, ref, value, { allowOverlap }), {
+                    label: 'start',
+                    mergeKey: 'type-start',
+                  })
                 }
               }}
             />
@@ -234,7 +238,10 @@ function Inspector() {
               onChange={(event) => {
                 const value = Number(event.target.value)
                 if (event.target.value !== '' && Number.isFinite(value)) {
-                  edit((draft) => setTokenEnd(draft, ref, value), { label: 'end', mergeKey: 'type-end' })
+                  edit((draft) => setTokenEnd(draft, ref, value, { allowOverlap }), {
+                    label: 'end',
+                    mergeKey: 'type-end',
+                  })
                 }
               }}
             />

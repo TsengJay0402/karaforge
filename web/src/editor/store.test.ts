@@ -201,3 +201,13 @@ describe('tap mode', () => {
     expect(store.getState().tapCursor).toEqual({ line: 1, index: 1 })
   })
 })
+
+describe('overlapping lines', () => {
+  it('starts as the editor was told and can be switched', () => {
+    expect(setup().store.getState().allowOverlap).toBe(false)
+    const store = createEditorStore(song(), { save: () => Promise.resolve({ revision: 1 }), allowOverlap: true })
+    expect(store.getState().allowOverlap).toBe(true)
+    store.getState().set({ allowOverlap: false })
+    expect(store.getState().allowOverlap).toBe(false)
+  })
+})

@@ -117,6 +117,24 @@ export function hitTest(list: Block[], x: number, row: number): Hit | null {
   return best
 }
 
+/**
+ * The timed tokens that a selection box covers, in reading order: those drawn in one of
+ * `rows` (lines alternate between rows 0 and 1, as in `blocks`) whose time overlaps
+ * `[fromMs, toMs]`.  A box narrower than a token still takes the token it lies in.
+ */
+export function tokensInBox(project: Project, fromMs: number, toMs: number, rows: readonly number[]): TokenRef[] {
+  const low = Math.min(fromMs, toMs)
+  const high = Math.max(fromMs, toMs)
+  const result: TokenRef[] = []
+  project.lines.forEach((line, lineIndex) => {
+    if (!rows.includes(lineIndex % 2)) return
+    line.tokens.forEach((token, index) => {
+      if (isTimed(token) && token.start_ms <= high && token.end_ms > low) result.push({ line: lineIndex, index })
+    })
+  })
+  return result
+}
+
 /** The onset closest to `timeMs` within `toleranceMs`, or `timeMs` itself. */
 export function snapToOnset(onsets: readonly number[], timeMs: number, toleranceMs: number): number {
   if (onsets.length === 0 || toleranceMs <= 0) return timeMs

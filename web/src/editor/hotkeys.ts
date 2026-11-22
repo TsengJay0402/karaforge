@@ -18,6 +18,13 @@ export const HOTKEYS: { keys: string[]; description: MessageKey }[] = [
   { keys: ['?'], description: 'help.help' },
 ]
 
+/** What the mouse does on the timeline (also shown in the help panel). */
+export const MOUSE_ACTIONS: { action: MessageKey; description: MessageKey }[] = [
+  { action: 'help.mouse.box', description: 'help.mouse.boxHint' },
+  { action: 'help.mouse.group', description: 'help.mouse.groupHint' },
+  { action: 'help.mouse.edge', description: 'help.mouse.edgeHint' },
+]
+
 /** Whether a key event comes from a field the user is typing into. */
 export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false

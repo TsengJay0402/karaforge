@@ -3,18 +3,20 @@ import { useEditor, useEditorState } from './context.ts'
 import { refAtTime, timingStats } from './doc.ts'
 import type { Dialog } from './Editor.tsx'
 import { canRedo, canUndo } from './history.ts'
+import { storeAllowOverlap } from './prefs.ts'
 import type { AudioMode } from './store.ts'
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5]
 
 export function Toolbar({ onDialog }: { onDialog: (dialog: Dialog) => void }) {
   const t = useT()
-  const { store, transport } = useEditor()
+  const { id, store, transport } = useEditor()
   const playing = useEditorState((state) => state.playing)
   const audioMode = useEditorState((state) => state.audioMode)
   const rate = useEditorState((state) => state.rate)
   const snap = useEditorState((state) => state.snap)
   const trackView = useEditorState((state) => state.trackView)
+  const allowOverlap = useEditorState((state) => state.allowOverlap)
   const tapMode = useEditorState((state) => state.tapMode)
   const saveState = useEditorState((state) => state.saveState)
   const readOnly = useEditorState((state) => state.readOnly)
@@ -133,6 +135,18 @@ export function Toolbar({ onDialog }: { onDialog: (dialog: Dialog) => void }) {
           onChange={(event) => state.set({ trackView: event.target.checked ? 'spectrogram' : 'waveform' })}
         />
         {t('editor.spectrogram')}
+      </label>
+      <label className="check" title={t('editor.overlap.hint')}>
+        <input
+          type="checkbox"
+          data-testid="allow-overlap"
+          checked={allowOverlap}
+          onChange={(event) => {
+            state.set({ allowOverlap: event.target.checked })
+            storeAllowOverlap(id, event.target.checked)
+          }}
+        />
+        {t('editor.overlap')}
       </label>
       <span className="spacer" />
       <span className="stats" data-testid="stats">

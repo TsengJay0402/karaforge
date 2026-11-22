@@ -19,6 +19,17 @@ export interface TokenRef {
   index: number
 }
 
+/** How the timing edits below treat the other lines. */
+export interface TimingOptions {
+  /**
+   * Lines may overlap in time (a duet or a harmony: both rows are sung at once).  An edit is
+   * then limited only by the tokens of its own line, and the end of the song; without it the
+   * whole song is one sequence, so a token cannot pass the tokens of the neighbouring lines
+   * either.
+   */
+  allowOverlap?: boolean
+}
+
 export const sameRef = (a: TokenRef, b: TokenRef) => a.line === b.line && a.index === b.index
 export const refKey = (ref: TokenRef) => `${ref.line}:${ref.index}`
 
@@ -78,26 +89,38 @@ export function previousRef(project: Project, ref: TokenRef): TokenRef | null {
   return null
 }
 
-function previousTimed(project: Project, ref: TokenRef): TokenRef | null {
+/** The timed token before `ref`; with `withinLine` only one of the same line counts. */
+function previousTimed(project: Project, ref: TokenRef, withinLine = false): TokenRef | null {
   let cursor = previousRef(project, ref)
   while (cursor && !isTimed(tokenAt(project, cursor))) cursor = previousRef(project, cursor)
-  return cursor
+  return cursor && withinLine && cursor.line !== ref.line ? null : cursor
 }
 
-function nextTimed(project: Project, ref: TokenRef): TokenRef | null {
+/** The timed token after `ref`; with `withinLine` only one of the same line counts. */
+function nextTimed(project: Project, ref: TokenRef, withinLine = false): TokenRef | null {
   let cursor = nextRef(project, ref)
   while (cursor && !isTimed(tokenAt(project, cursor))) cursor = nextRef(project, cursor)
-  return cursor
+  return cursor && withinLine && cursor.line !== ref.line ? null : cursor
 }
 
-/** The token that is being sung at `timeMs`, or the last one that started before it. */
+/** The latest time a token may end at: the end of the song, when it is known. */
+function songEnd(project: Project): number {
+  return project.meta.duration_ms > 0 ? project.meta.duration_ms : Number.POSITIVE_INFINITY
+}
+
+/**
+ * The token that is being sung at `timeMs`, or the last one that started before it.  Where
+ * lines overlap, the one that started last; on a tie, the later one in reading order.
+ */
 export function refAtTime(project: Project, timeMs: number): TokenRef | null {
   let best: TokenRef | null = null
+  let bestStart = Number.NEGATIVE_INFINITY
   for (const ref of allRefs(project)) {
     const token = tokenAt(project, ref)
-    if (!isTimed(token)) continue
-    if (token.start_ms <= timeMs) best = ref
-    else break
+    if (isTimed(token) && token.start_ms <= timeMs && token.start_ms >= bestStart) {
+      best = ref
+      bestStart = token.start_ms
+    }
   }
   return best
 }
@@ -114,10 +137,10 @@ const clamp = (value: number, low: number, high: number) => Math.min(Math.max(va
  * Move the start of a token.  The previous token keeps at least `MIN_TOKEN_MS`; if it ended
  * where this token started (or would now overlap it), its end follows.
  */
-export function setTokenStart(project: Project, ref: TokenRef, startMs: number): void {
+export function setTokenStart(project: Project, ref: TokenRef, startMs: number, options: TimingOptions = {}): void {
   const token = tokenAt(project, ref)
   if (!token) return
-  const beforeRef = previousTimed(project, ref)
+  const beforeRef = previousTimed(project, ref, options.allowOverlap === true)
   const before = beforeRef ? tokenAt(project, beforeRef) : undefined
   const oldStart = token.start_ms
   const low = isTimed(before) ? before.start_ms + MIN_TOKEN_MS : 0
@@ -133,30 +156,33 @@ export function setTokenStart(project: Project, ref: TokenRef, startMs: number):
   }
 }
 
-/** Move the end of a token; it cannot pass the start of the next timed token. */
-export function setTokenEnd(project: Project, ref: TokenRef, endMs: number): void {
+/**
+ * Move the end of a token; it cannot pass the start of the next timed token (of the same line
+ * when lines may overlap) or the end of the song.
+ */
+export function setTokenEnd(project: Project, ref: TokenRef, endMs: number, options: TimingOptions = {}): void {
   const token = tokenAt(project, ref)
   if (!token || token.start_ms === null) return
-  const after = nextTimed(project, ref)
+  const after = nextTimed(project, ref, options.allowOverlap === true)
   const afterToken = after ? tokenAt(project, after) : undefined
   const low = token.start_ms + MIN_TOKEN_MS
-  const duration = project.meta.duration_ms > 0 ? project.meta.duration_ms : Number.POSITIVE_INFINITY
-  const high = isTimed(afterToken) ? afterToken.start_ms : duration
+  const high = isTimed(afterToken) ? afterToken.start_ms : songEnd(project)
   token.end_ms = Math.round(clamp(endMs, low, Math.max(low, high)))
   markManual(token)
 }
 
 /** Shift a token as a whole, between its timed neighbours. */
-export function moveToken(project: Project, ref: TokenRef, deltaMs: number): void {
+export function moveToken(project: Project, ref: TokenRef, deltaMs: number, options: TimingOptions = {}): void {
   const token = tokenAt(project, ref)
   if (!isTimed(token)) return
-  const beforeRef = previousTimed(project, ref)
+  const withinLine = options.allowOverlap === true
+  const beforeRef = previousTimed(project, ref, withinLine)
   const before = beforeRef ? tokenAt(project, beforeRef) : undefined
-  const afterRef = nextTimed(project, ref)
+  const afterRef = nextTimed(project, ref, withinLine)
   const after = afterRef ? tokenAt(project, afterRef) : undefined
   const length = token.end_ms - token.start_ms
   const low = isTimed(before) ? before.start_ms + MIN_TOKEN_MS : 0
-  const high = isTimed(after) ? after.start_ms - length : Number.POSITIVE_INFINITY
+  const high = (isTimed(after) ? after.start_ms : songEnd(project)) - length
   const oldStart = token.start_ms
   const start = Math.round(clamp(oldStart + deltaMs, low, Math.max(low, high)))
   token.start_ms = start
@@ -165,6 +191,86 @@ export function moveToken(project: Project, ref: TokenRef, deltaMs: number): voi
   if (isTimed(before) && beforeRef) {
     const touching = Math.abs(before.end_ms - oldStart) <= 1 && beforeRef.line === ref.line
     if (before.end_ms > start || touching) before.end_ms = start
+  }
+}
+
+/**
+ * Drag a selection on the timeline: the start of every selected token moves by the same
+ * amount, and each one is locked.
+ *
+ * Ends follow the rule of `nudgeTokens` (dragging is holding an arrow key, continuously): a
+ * selected token that runs straight into a token that is not selected stays attached to it,
+ * so the fill never pauses where it did not; the token before the selection follows in the
+ * same way, or is cut back where the selection now overlaps it.  Tokens that are not selected
+ * keep their start.  Unlike nudging, the amount is limited for the selection as a whole, so a
+ * fast drag never squeezes it together: it stops where a token would become shorter than
+ * `MIN_TOKEN_MS`, where a token followed by a pause would reach the next token, at 0 and at
+ * the end of the song.  A limit that the document already breaks only stops the movement
+ * towards it.
+ */
+export function moveSelection(
+  project: Project,
+  refs: TokenRef[],
+  deltaMs: number,
+  options: TimingOptions = {},
+): void {
+  const withinLine = options.allowOverlap === true
+  const moving = new Map<string, TokenRef>()
+  for (const ref of refs) if (isTimed(tokenAt(project, ref))) moving.set(refKey(ref), ref)
+  if (moving.size === 0) return
+
+  interface Plan {
+    ref: TokenRef
+    /** The token before it, when that one is not selected. */
+    before: TokenRef | null
+    /** The start of the token after it, when that one is not selected and this one runs into it. */
+    attachedTo: number | null
+  }
+  const plans: Plan[] = []
+  let low = Number.NEGATIVE_INFINITY
+  let high = Number.POSITIVE_INFINITY
+  for (const ref of moving.values()) {
+    const token = tokenAt(project, ref)
+    if (!isTimed(token)) continue
+    const plan: Plan = { ref, before: null, attachedTo: null }
+    const beforeRef = previousTimed(project, ref, withinLine)
+    const before = beforeRef ? tokenAt(project, beforeRef) : undefined
+    if (beforeRef && isTimed(before) && !moving.has(refKey(beforeRef))) {
+      plan.before = beforeRef
+      low = Math.max(low, before.start_ms + MIN_TOKEN_MS - token.start_ms)
+    } else if (!beforeRef) {
+      low = Math.max(low, -token.start_ms)
+    }
+    const afterRef = nextTimed(project, ref, withinLine)
+    const after = afterRef ? tokenAt(project, afterRef) : undefined
+    if (!afterRef) {
+      high = Math.min(high, songEnd(project) - token.end_ms)
+    } else if (isTimed(after) && !moving.has(refKey(afterRef))) {
+      if (token.end_ms >= after.start_ms - 1) {
+        plan.attachedTo = after.start_ms
+        high = Math.min(high, after.start_ms - MIN_TOKEN_MS - token.start_ms)
+      } else {
+        high = Math.min(high, after.start_ms - token.end_ms)
+      }
+    }
+    plans.push(plan)
+  }
+  const shift = Math.round(clamp(deltaMs, Math.min(0, low), Math.max(0, high)))
+
+  for (const plan of plans) {
+    const token = tokenAt(project, plan.ref)
+    if (!isTimed(token)) continue
+    const oldStart = token.start_ms
+    token.start_ms = oldStart + shift
+    // (The `max` only matters for a document that already broke the limits: a token never
+    // ends before it starts.)
+    token.end_ms = plan.attachedTo === null ? token.end_ms + shift : Math.max(plan.attachedTo, token.start_ms)
+    markManual(token)
+    const before = plan.before ? tokenAt(project, plan.before) : undefined
+    if (plan.before && isTimed(before)) {
+      const attached = plan.before.line === plan.ref.line && before.end_ms >= oldStart - 1
+      if (attached || before.end_ms > token.start_ms) before.end_ms = Math.max(before.start_ms, token.start_ms)
+    }
   }
 }
 
@@ -199,9 +305,11 @@ export function lineRefs(project: Project, lineIndex: number): TokenRef[] {
  * What a nudge means for the end of a token depends on what follows it.  A token that runs
  * straight into the next one stays attached to it (so the fill never pauses where it did
  * not pause before); a token followed by a pause keeps its length.  The token before the
- * selection follows in the same way.  Nothing ever becomes shorter than `MIN_TOKEN_MS`.
+ * selection follows in the same way.  Nothing ever becomes shorter than `MIN_TOKEN_MS` or
+ * ends after the song.
  */
-export function nudgeTokens(project: Project, refs: TokenRef[], deltaMs: number): void {
+export function nudgeTokens(project: Project, refs: TokenRef[], deltaMs: number, options: TimingOptions = {}): void {
+  const withinLine = options.allowOverlap === true
   const ordered = refs
     .filter((ref) => isTimed(tokenAt(project, ref)))
     .sort((a, b) => a.line - b.line || a.index - b.index)
@@ -217,9 +325,9 @@ export function nudgeTokens(project: Project, refs: TokenRef[], deltaMs: number)
     const token = tokenAt(project, ref)
     const was = old.get(refKey(ref))
     if (!isTimed(token) || !was) continue
-    const beforeRef = previousTimed(project, ref)
+    const beforeRef = previousTimed(project, ref, withinLine)
     const before = beforeRef ? tokenAt(project, beforeRef) : undefined
-    const afterRef = nextTimed(project, ref)
+    const afterRef = nextTimed(project, ref, withinLine)
     const after = afterRef ? tokenAt(project, afterRef) : undefined
     const afterWas = afterRef ? old.get(refKey(afterRef)) : undefined
 
@@ -227,6 +335,8 @@ export function nudgeTokens(project: Project, refs: TokenRef[], deltaMs: number)
     if (isTimed(after) && afterWas) {
       const attached = was.end >= afterWas.start - 1
       end = attached ? after.start_ms : Math.min(end, after.start_ms)
+    } else {
+      end = Math.min(end, songEnd(project))
     }
     const low = isTimed(before) ? before.start_ms + MIN_TOKEN_MS : 0
     const startAt = Math.round(clamp(was.start + deltaMs, low, Math.max(low, end - MIN_TOKEN_MS)))
@@ -247,6 +357,33 @@ export function setLocked(project: Project, refs: Iterable<TokenRef>, locked: bo
     const token = tokenAt(project, ref)
     if (token && (isTimed(token) || !locked)) token.locked = locked
   }
+}
+
+/**
+ * The timed tokens that are sung at the same time as a token of another line (overlapping
+ * lines: a duet, a harmony), in reading order.  Tokens that merely touch do not count.
+ */
+export function overlappingRefs(project: Project): TokenRef[] {
+  const timed: { ref: TokenRef; start: number; end: number }[] = []
+  for (const ref of allRefs(project)) {
+    const token = tokenAt(project, ref)
+    if (isTimed(token) && token.end_ms > token.start_ms) {
+      timed.push({ ref, start: token.start_ms, end: token.end_ms })
+    }
+  }
+  timed.sort((a, b) => a.start - b.start)
+  const found = new Set<string>()
+  let active: typeof timed = []
+  for (const item of timed) {
+    active = active.filter((other) => other.end > item.start)
+    for (const other of active) {
+      if (other.ref.line === item.ref.line) continue
+      found.add(refKey(other.ref))
+      found.add(refKey(item.ref))
+    }
+    active.push(item)
+  }
+  return allRefs(project).filter((ref) => found.has(refKey(ref)))
 }
 
 /** Remove the times of tokens (they will be placed by the next alignment). */
@@ -379,11 +516,19 @@ export function mergeWithNext(project: Project, lineIndex: number): void {
  * With `bridge` (click mode, where nothing marks the end of a token) the token before it in
  * the same line ends here, unless a long pause lies in between.  Without it (hold mode, where
  * the key release already marked that end) the previous token is only cut if it overlaps.
+ * When lines may overlap, only the tokens of the same line are cut or cleared.
  */
-export function tapStart(project: Project, ref: TokenRef, timeMs: number, bridge = true): void {
+export function tapStart(
+  project: Project,
+  ref: TokenRef,
+  timeMs: number,
+  bridge = true,
+  options: TimingOptions = {},
+): void {
   const token = tokenAt(project, ref)
   if (!token) return
-  const beforeRef = previousTimed(project, ref)
+  const withinLine = options.allowOverlap === true
+  const beforeRef = previousTimed(project, ref, withinLine)
   const before = beforeRef ? tokenAt(project, beforeRef) : undefined
   const low = isTimed(before) ? before.start_ms + MIN_TOKEN_MS : 0
   const start = Math.round(Math.max(timeMs, low))
@@ -396,7 +541,7 @@ export function tapStart(project: Project, ref: TokenRef, timeMs: number, bridge
   }
   // Anything after this token that is now in the past loses its time.
   let cursor = nextRef(project, ref)
-  while (cursor) {
+  while (cursor && (!withinLine || cursor.line === ref.line)) {
     const later: Token | undefined = tokenAt(project, cursor)
     if (later && later.start_ms !== null) {
       if (later.start_ms > start || later.locked) break

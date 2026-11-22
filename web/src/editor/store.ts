@@ -32,6 +32,8 @@ export type SelectMode = 'replace' | 'toggle' | 'range'
 export interface EditorDeps {
   save: (doc: Project, revision: number) => Promise<{ revision: number }>
   autosaveMs?: number
+  /** Whether lines may overlap in time when the editor opens (see `allowOverlap`). */
+  allowOverlap?: boolean
 }
 
 export interface EditorState {
@@ -53,6 +55,11 @@ export interface EditorState {
   tapMode: TapMode
   tapCursor: TokenRef | null
   readOnly: boolean
+  /**
+   * Lines may overlap in time (duets, harmonies): timing edits are then limited only by the
+   * tokens of the same line.  Off, the whole song is one sequence.
+   */
+  allowOverlap: boolean
 
   edit: (recipe: (draft: Project) => void, options: EditOptions) => void
   undo: () => void
@@ -64,7 +71,7 @@ export interface EditorState {
   setCurrent: (ref: TokenRef | null) => void
   set: (
     partial: Partial<
-      Pick<EditorState, 'playing' | 'audioMode' | 'rate' | 'snap' | 'trackView' | 'readOnly' | 'zoom'>
+      Pick<EditorState, 'playing' | 'audioMode' | 'rate' | 'snap' | 'trackView' | 'readOnly' | 'zoom' | 'allowOverlap'>
     >,
   ) => void
   startTap: (mode: Exclude<TapMode, 'off'>, from: TokenRef | null) => void
@@ -141,6 +148,7 @@ export function createEditorStore(doc: Project, deps: EditorDeps): EditorStore {
       tapMode: 'off',
       tapCursor: null,
       readOnly: false,
+      allowOverlap: deps.allowOverlap ?? false,
 
       edit: (recipe, options) => {
         const state = get()
