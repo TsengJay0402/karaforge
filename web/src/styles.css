@@ -478,6 +478,95 @@ progress {
   color: var(--muted);
 }
 
+.link-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-end;
+  margin-top: 0.8rem;
+}
+
+.link-row label {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.remote-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(79, 140, 255, 0.07);
+}
+
+.remote-card img,
+.remote-art {
+  flex: 0 0 auto;
+  width: 160px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--panel-2);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+}
+
+.remote-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.remote-body strong {
+  overflow-wrap: anywhere;
+}
+
+.remote-body small {
+  color: var(--muted);
+}
+
+.remote-notice {
+  font-size: 0.78rem;
+}
+
+.import-progress {
+  margin: 0.6rem 0;
+}
+
+.imports {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.import {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+@media (max-width: 560px) {
+  .remote-card {
+    flex-wrap: wrap;
+  }
+
+  .remote-card img,
+  .remote-art {
+    width: 100%;
+  }
+}
+
 .field-row {
   display: flex;
   flex-wrap: wrap;

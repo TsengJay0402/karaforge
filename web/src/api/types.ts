@@ -78,7 +78,7 @@ export interface ApiErrorBody {
 }
 
 export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
-export type JobKind = 'process' | 'align' | 'export' | 'models'
+export type JobKind = 'process' | 'align' | 'export' | 'models' | 'import'
 
 export interface Job {
   id: string
@@ -197,8 +197,27 @@ export interface SystemInfo {
     fallback_reason_en: string | null
   }
   ffmpeg: { found: boolean; version: string | null; libass: boolean; error: ApiErrorBody | null }
+  /** yt-dlp is optional: without it projects cannot start from a video link. */
+  ytdlp: { found: boolean; version: string | null }
   qwen: boolean
   formats: ExportFormat[]
+}
+
+/** What a video link points to (read by yt-dlp before anything is downloaded). */
+export interface RemoteMedia {
+  /** The page address yt-dlp settled on; a short link becomes the full one. */
+  url: string
+  id: string
+  /** Suggested song title. */
+  title: string
+  /** Suggested artist. */
+  artist: string
+  uploader: string
+  duration_ms: number | null
+  thumbnail: string | null
+  extractor: string
+  has_video: boolean
+  size_bytes: number | null
 }
 
 /** A theme as the server sends it; the editor only touches the fields it knows. */

@@ -15,6 +15,7 @@ KaraForge 本身以 **Apache License 2.0** 釋出（見根目錄的 `LICENSE`）
   只有開發時才用的評測工具會安裝 GPL 套件。
 - 瀏覽器預覽用的 JASSUB（libass 的 WebAssembly 版）是 **LGPL**；它以獨立、可替換的檔案形式隨前端提供，詳見下方說明。
 - ffmpeg 不隨 KaraForge 散布（由使用者安裝，或由 Docker 映像從 Debian 套件庫安裝）。
+- 選用的 yt-dlp 也不隨 KaraForge 散布，由使用者自行安裝（Docker 映像也不包含）。
 
 ## 模型（使用者自行下載）
 
@@ -138,8 +139,9 @@ JASSUB 把 libass、FreeType、HarfBuzz、FriBidi 等函式庫編譯成 WebAssem
 | 程式 | 授權 | 怎麼取得 |
 |---|---|---|
 | ffmpeg／ffprobe（需含 libass） | LGPL 或 GPL，視編譯選項而定 | 使用者自行安裝；Docker 映像從 Debian 套件庫安裝（屬於「僅是彙集」的獨立程式） |
+| yt-dlp（選用：用影片網址建立專案） | Unlicense（公有領域） | 使用者自行安裝；Docker 映像不包含 |
 
-KaraForge 以子行程呼叫 ffmpeg，沒有連結它的函式庫。
+KaraForge 以子行程呼叫 ffmpeg 與 yt-dlp，沒有連結它們的函式庫。
 
 ## 測試資料
 

@@ -326,6 +326,31 @@ def check_models() -> list[Check]:
     return checks
 
 
+def check_ytdlp() -> Check:
+    """yt-dlp, which is optional: it is only needed to start a project from a video link."""
+    from karaforge.tools import ytdlp
+
+    try:
+        executable = ytdlp.find_ytdlp()
+        version = ytdlp.version(executable)
+    except KaraForgeError as error:
+        return Check(
+            "yt-dlp",
+            "ok",
+            "沒有安裝選用的 yt-dlp：無法用影片網址建立專案（上傳檔案不受影響）。",
+            "The optional yt-dlp is not installed: projects cannot start from a video link "
+            "(uploading files is not affected).",
+            error.hint_zh,
+            error.hint_en,
+        )
+    return Check(
+        "yt-dlp",
+        "ok",
+        f"yt-dlp {version}（{executable}）：可以用影片網址建立專案。",
+        f"yt-dlp {version} ({executable}): projects can start from a video link.",
+    )
+
+
 def run_checks(*, models: bool = True) -> list[Check]:
     """Run every check.
 
@@ -335,6 +360,7 @@ def run_checks(*, models: bool = True) -> list[Check]:
     checks = [
         check_python(),
         *check_ffmpeg(),
+        check_ytdlp(),
         check_device(),
         *check_fonts_and_themes(),
         check_home(),

@@ -10,6 +10,7 @@ import type {
   Project,
   ProjectDetail,
   ProjectSummary,
+  RemoteMedia,
   SystemInfo,
   Theme,
   ThemeEntry,
@@ -118,6 +119,23 @@ export interface NewProjectInput {
   start: boolean
 }
 
+/** A project made from a video link: the same choices as an upload, a link instead of a file. */
+export interface ImportProjectInput extends Omit<NewProjectInput, 'media'> {
+  url: string
+}
+
+/** The fields an upload and a link import share. */
+function projectFields(form: FormData, input: Omit<NewProjectInput, 'media'>): FormData {
+  if (input.lyricsFile) form.set('lyrics_file', input.lyricsFile)
+  else if (input.lyrics?.trim()) form.set('lyrics', input.lyrics)
+  if (input.title) form.set('title', input.title)
+  if (input.artist) form.set('artist', input.artist)
+  if (input.language) form.set('language', input.language)
+  if (input.profile) form.set('profile', input.profile)
+  form.set('start', input.start ? 'true' : 'false')
+  return form
+}
+
 export interface ExportInput {
   format: string
   audio: string
@@ -136,15 +154,20 @@ export const api = {
   createProject: async (input: NewProjectInput) => {
     const form = new FormData()
     form.set('media', input.media)
-    if (input.lyricsFile) form.set('lyrics_file', input.lyricsFile)
-    else if (input.lyrics?.trim()) form.set('lyrics', input.lyrics)
-    if (input.title) form.set('title', input.title)
-    if (input.artist) form.set('artist', input.artist)
-    if (input.language) form.set('language', input.language)
-    if (input.profile) form.set('profile', input.profile)
-    form.set('start', input.start ? 'true' : 'false')
-    const response = await request('/api/projects', { method: 'POST', body: form })
+    const response = await request('/api/projects', { method: 'POST', body: projectFields(form, input) })
     return (await response.json()) as { project: ProjectSummary; job: Job | null }
+  },
+
+  /** What a video link points to; nothing is downloaded yet. */
+  probeUrl: async (url: string) =>
+    (await sendJson<{ media: RemoteMedia }>('POST', '/api/media/probe', { url })).media,
+
+  /** Start a job that downloads the video, then makes (and processes) the project. */
+  importProject: async (input: ImportProjectInput) => {
+    const form = new FormData()
+    form.set('url', input.url)
+    const response = await request('/api/projects/import', { method: 'POST', body: projectFields(form, input) })
+    return ((await response.json()) as { job: Job }).job
   },
 
   saveProject: (id: string, doc: Project, revision: number) =>

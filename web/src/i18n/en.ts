@@ -31,6 +31,7 @@ export const en: Record<MessageKey, string> = {
   'list.state.broken': 'Project file damaged',
   'list.lowConfidence': '{count} tokens to check',
   'list.lines': '{lines} lines / {tokens} tokens',
+  'list.importing': 'Downloading “{title}”',
 
   'system.noFfmpeg': 'ffmpeg was not found; media cannot be processed and videos cannot be exported.',
   'system.noLibass':
@@ -64,12 +65,26 @@ export const en: Record<MessageKey, string> = {
   'new.quality.gpu-quality.hint': 'Best recognition model; recommended with a GPU',
   'new.start': 'Start processing',
   'new.creating': 'Uploading…',
-  'new.needMedia': 'Choose a media file first.',
+  'new.needMedia': 'Choose a media file or paste a video link first.',
+  'new.downloading': 'Downloading…',
+  'new.url.label': 'Or paste a video link (YouTube and other sites)',
+  'new.url.load': 'Load',
+  'new.url.loading': 'Reading the video information…',
+  'new.url.remove': 'Use a file instead',
+  'new.url.invalid': 'Paste a video link that starts with http:// or https://.',
+  'new.url.missing':
+    'Starting from a link needs yt-dlp (macOS: brew install yt-dlp; elsewhere: pipx install yt-dlp); reload this page once it is installed.',
+  'new.url.size': 'about {size}',
+  'new.url.notice': 'Only download what you have the right to use, and follow the terms of the video site.',
+  'new.url.downloading':
+    'Downloading the video; processing starts by itself afterwards. You can leave this page: the project list shows the progress.',
+  'new.url.cancelled': 'The download was cancelled.',
 
   'job.kind.process': 'Processing',
   'job.kind.align': 'Re-aligning',
   'job.kind.export': 'Exporting',
   'job.kind.models': 'Downloading models',
+  'job.kind.import': 'Downloading the video',
   'job.state.queued': 'Waiting…',
   'job.state.running': 'Running',
   'job.state.done': 'Done',
