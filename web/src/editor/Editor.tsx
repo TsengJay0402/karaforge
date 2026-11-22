@@ -25,6 +25,7 @@ import {
 import { isTyping } from './hotkeys.ts'
 import { LyricsPanel } from './LyricsPanel.tsx'
 import { Preview } from './Preview.tsx'
+import { initialAllowOverlap } from './prefs.ts'
 import { type AudioMode, createEditorStore } from './store.ts'
 import { ThemePanel } from './ThemePanel.tsx'
 import { Timeline } from './Timeline.tsx'
@@ -104,12 +105,14 @@ function useHotkeys(openDialog: (dialog: Dialog) => void) {
         if (state.tapMode === 'click') {
           if (event.repeat) return
           const time = transport.now()
-          state.edit((draft) => tapStart(draft, cursor, time), { label: 'tap' })
+          const options = { allowOverlap: state.allowOverlap }
+          state.edit((draft) => tapStart(draft, cursor, time, true, options), { label: 'tap' })
           state.setTapCursor(nextRef(doc, cursor))
         } else if (!held.has(' ')) {
           held.add(' ')
           const time = transport.now()
-          state.edit((draft) => tapStart(draft, cursor, time, false), { label: 'tap' })
+          const options = { allowOverlap: state.allowOverlap }
+          state.edit((draft) => tapStart(draft, cursor, time, false, options), { label: 'tap' })
         }
         return
       }
@@ -155,18 +158,19 @@ function useHotkeys(openDialog: (dialog: Dialog) => void) {
         event.preventDefault()
         const step = (event.shiftKey ? 50 : 10) * (key === 'ArrowLeft' ? -1 : 1)
         const selection = state.selection
+        const options = { allowOverlap: state.allowOverlap }
         if (event.altKey) {
           state.edit(
             (draft) => {
               for (const ref of selection) {
                 const end = tokenAt(draft, ref)?.end_ms
-                if (end != null) setTokenEnd(draft, ref, end + step)
+                if (end != null) setTokenEnd(draft, ref, end + step, options)
               }
             },
             { label: 'nudge end', mergeKey: 'nudge-end' },
           )
         } else {
-          state.edit((draft) => nudgeTokens(draft, selection, step), { label: 'nudge', mergeKey: 'nudge' })
+          state.edit((draft) => nudgeTokens(draft, selection, step, options), { label: 'nudge', mergeKey: 'nudge' })
         }
         return
       }
@@ -353,6 +357,7 @@ export function Editor({ detail }: { detail: ProjectDetail }) {
     media: detail.media,
     store: createEditorStore(detail.project, {
       save: (doc, revision) => api.saveProject(id, doc, revision),
+      allowOverlap: initialAllowOverlap(id, detail.project),
     }),
     transport: new Transport({
       sources: sources(detail),

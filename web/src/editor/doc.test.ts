@@ -8,12 +8,15 @@ import {
   deleteLine,
   insertLine,
   lineEnd,
+  lineRefs,
   lineStart,
   lineText,
   mergeWithNext,
+  moveSelection,
   moveToken,
   nextRef,
   nudgeTokens,
+  overlappingRefs,
   previousRef,
   readingKind,
   refAtTime,
@@ -299,6 +302,161 @@ describe('lines', () => {
     // Nothing happens at the edges.
     expect(produce(song(), (draft) => splitLine(draft, { line: 0, index: 0 }))).toEqual(song())
     expect(produce(song(), (draft) => mergeWithNext(draft, 1))).toEqual(song())
+  })
+})
+
+describe('dragging a selection', () => {
+  const five = () => project([timedLine('L001', ['一', '二', '三', '四', '五'], 1000)])
+  const middle = [
+    { line: 0, index: 1 },
+    { line: 0, index: 2 },
+  ]
+
+  it('moves every start by the same amount and keeps the fill continuous', () => {
+    const later = produce(five(), (draft) => moveSelection(draft, middle, 150))
+    expect(times(later.lines[0])).toEqual([
+      ['一', 1000, 1550],
+      ['二', 1550, 1950],
+      ['三', 1950, 2200],
+      ['四', 2200, 2600],
+      ['五', 2600, 3000],
+    ])
+    expect(later.lines[0]!.tokens.map((item) => item.locked)).toEqual([false, true, true, false, false])
+    const earlier = produce(five(), (draft) => moveSelection(draft, middle, -150))
+    expect(times(earlier.lines[0]).slice(0, 4)).toEqual([
+      ['一', 1000, 1250],
+      ['二', 1250, 1650],
+      ['三', 1650, 2200],
+      ['四', 2200, 2600],
+    ])
+  })
+
+  it('stops as a whole instead of squeezing the selection together', () => {
+    const tooLate = produce(five(), (draft) => moveSelection(draft, middle, 9999))
+    expect(times(tooLate.lines[0]).slice(0, 4)).toEqual([
+      ['一', 1000, 1770],
+      ['二', 1770, 2170],
+      ['三', 2170, 2200],
+      ['四', 2200, 2600],
+    ])
+    const tooEarly = produce(five(), (draft) => moveSelection(draft, middle, -9999))
+    expect(times(tooEarly.lines[0]).slice(0, 3)).toEqual([
+      ['一', 1000, 1030],
+      ['二', 1030, 1430],
+      ['三', 1430, 2200],
+    ])
+  })
+
+  it('keeps a line that is followed by a pause in one piece', () => {
+    // It stops at the next line, every token keeping its length.
+    const blocked = produce(song(), (draft) => moveSelection(draft, lineRefs(draft, 0), 99_999))
+    expect(times(blocked.lines[0])).toEqual([
+      ['夜', 3800, 4200],
+      ['空', 4200, 4600],
+      ['裡', 4600, 5000],
+    ])
+    // A selection across two lines moves both; nothing passes 0.
+    const both = produce(song(), (draft) => moveSelection(draft, allRefs(draft), -99_999))
+    expect(times(both.lines[0])[0]).toEqual(['夜', 0, 400])
+    expect(times(both.lines[1])).toEqual([
+      ['so ', 4000, 4500],
+      ['bright', 4500, 5000],
+    ])
+  })
+})
+
+describe('overlapping lines', () => {
+  const overlap = { allowOverlap: true }
+
+  it('lets a line start before the previous line has ended, leaving that line alone', () => {
+    // One sequence: the start stops after the last token of the previous line, which is cut.
+    const sequence = produce(song(), (draft) => setTokenStart(draft, { line: 1, index: 0 }, 1500))
+    expect(times(sequence.lines[0])[2]).toEqual(['裡', 1800, 1830])
+    expect(times(sequence.lines[1])[0]).toEqual(['so ', 1830, 5500])
+    const free = produce(song(), (draft) => setTokenStart(draft, { line: 1, index: 0 }, 1500, overlap))
+    expect(times(free.lines[0])).toEqual(times(song().lines[0]))
+    expect(times(free.lines[1])[0]).toEqual(['so ', 1500, 5500])
+    // Inside a line nothing changes: the previous token still limits the start and follows it.
+    const inside = produce(song(), (draft) => setTokenStart(draft, { line: 1, index: 1 }, 0, overlap))
+    expect(times(inside.lines[1])).toEqual([
+      ['so ', 5000, 5030],
+      ['bright', 5030, 6000],
+    ])
+  })
+
+  it('lets the last token of a line run on into the next line, up to the end of the song', () => {
+    const free = produce(song(), (draft) => setTokenEnd(draft, { line: 0, index: 2 }, 9000, overlap))
+    expect(times(free.lines[0])[2]).toEqual(['裡', 1800, 9000])
+    const capped = produce(song(), (draft) => setTokenEnd(draft, { line: 0, index: 2 }, 99_000, overlap))
+    expect(times(capped.lines[0])[2]).toEqual(['裡', 1800, 60_000])
+    const inside = produce(song(), (draft) => setTokenEnd(draft, { line: 0, index: 0 }, 9000, overlap))
+    expect(times(inside.lines[0])[0]).toEqual(['夜', 1000, 1400])
+    const moved = produce(song(), (draft) => moveToken(draft, { line: 0, index: 2 }, 99_000, overlap))
+    expect(times(moved.lines[0])[2]).toEqual(['裡', 59_600, 60_000])
+  })
+
+  it('drags and nudges a whole line into the time of the previous one', () => {
+    const sequence = produce(song(), (draft) => moveSelection(draft, lineRefs(draft, 1), -4000))
+    expect(times(sequence.lines[1])).toEqual([
+      ['so ', 1830, 2330],
+      ['bright', 2330, 2830],
+    ])
+    expect(times(sequence.lines[0])[2]).toEqual(['裡', 1800, 1830])
+
+    const dragged = produce(song(), (draft) => moveSelection(draft, lineRefs(draft, 1), -4000, overlap))
+    expect(times(dragged.lines[1])).toEqual([
+      ['so ', 1000, 1500],
+      ['bright', 1500, 2000],
+    ])
+    expect(times(dragged.lines[0])).toEqual(times(song().lines[0]))
+    const nudged = produce(song(), (draft) => nudgeTokens(draft, lineRefs(draft, 1), -4000, overlap))
+    expect(times(nudged.lines[1])).toEqual(times(dragged.lines[1]))
+    expect(times(nudged.lines[0])).toEqual(times(song().lines[0]))
+    // Without a next token in the line, the end of the song is the limit.
+    const end = produce(song(), (draft) => moveSelection(draft, lineRefs(draft, 0), 99_999, overlap))
+    expect(times(end.lines[0])[2]).toEqual(['裡', 59_600, 60_000])
+    const nudgedEnd = produce(song(), (draft) => nudgeTokens(draft, [{ line: 0, index: 2 }], 99_000, overlap))
+    expect(times(nudgedEnd.lines[0])[2]).toEqual(['裡', 59_970, 60_000])
+  })
+
+  it('taps one line over another without cutting or clearing the other line', () => {
+    const sequence = produce(song(), (draft) => tapStart(draft, { line: 1, index: 0 }, 1500))
+    expect(times(sequence.lines[1])[0]).toEqual(['so ', 1830, 2230])
+    expect(times(sequence.lines[0])[2]).toEqual(['裡', 1800, 1830])
+    const free = produce(song(), (draft) => tapStart(draft, { line: 1, index: 0 }, 1500, true, overlap))
+    expect(times(free.lines[1])).toEqual([
+      ['so ', 1500, 1900],
+      ['bright', 5500, 6000],
+    ])
+    expect(times(free.lines[0])).toEqual(times(song().lines[0]))
+
+    // A late tap clears the stale times after it, but only in its own line.
+    const late = produce(song(), (draft) => tapStart(draft, { line: 0, index: 2 }, 5200))
+    expect(times(late.lines[1])[0]).toEqual(['so ', null, null])
+    const lateFree = produce(song(), (draft) => tapStart(draft, { line: 0, index: 2 }, 5200, true, overlap))
+    expect(times(lateFree.lines[0])[2]).toEqual(['裡', 5200, 5600])
+    expect(times(lateFree.lines[1])).toEqual(times(song().lines[1]))
+  })
+
+  it('finds the tokens that are sung at the same time as another line', () => {
+    const duet = project([
+      timedLine('L001', ['一', '二', '三'], 1000),
+      timedLine('L002', ['四', '五'], 1500, 400, 'f'),
+    ])
+    expect(overlappingRefs(duet)).toEqual([
+      { line: 0, index: 1 },
+      { line: 0, index: 2 },
+      { line: 1, index: 0 },
+      { line: 1, index: 1 },
+    ])
+    // The token being sung is the one that started last.
+    expect(refAtTime(duet, 1600)).toEqual({ line: 1, index: 0 })
+    expect(refAtTime(duet, 1850)).toEqual({ line: 0, index: 2 })
+    expect(refAtTime(duet, 2000)).toEqual({ line: 1, index: 1 })
+    // Lines one after the other, even touching ones, do not overlap.
+    expect(overlappingRefs(song())).toEqual([])
+    const touching = project([timedLine('L001', ['一'], 1000), timedLine('L002', ['二'], 1400)])
+    expect(overlappingRefs(touching)).toEqual([])
   })
 })
 

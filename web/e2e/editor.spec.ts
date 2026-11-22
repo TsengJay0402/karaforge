@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 import { openEditor, serverProject, timelinePoint, waitSaved } from './helpers.ts'
 
@@ -82,6 +82,110 @@ test('dragging a block on the timeline moves the token', async ({ page, request 
   await page.keyboard.press('Control+z')
   await waitSaved(page)
   expect((await serverProject(request, 'demo')).lines[0]!.tokens[10]!.start_ms).toBe(before.start_ms)
+})
+
+/** Scroll the timeline so that it starts at `timeMs` (its scroll bar is a range input). */
+async function scrollTimeline(page: Page, timeMs: number): Promise<void> {
+  await page.getByRole('slider', { name: 'scroll' }).evaluate((element, value) => {
+    // The native setter: React does not notice a value assigned through the element itself.
+    const input = element as HTMLInputElement
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, String(value))
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }, timeMs)
+  await expect(page.getByTestId('timeline')).toHaveAttribute('data-start-ms', String(timeMs))
+}
+
+test('a box drawn on the timeline selects tokens, and dragging one of them moves them all', async ({
+  page,
+  request,
+}) => {
+  await openEditor(page, 'demo')
+  const before = (await serverProject(request, 'demo')).lines[0]!.tokens
+  await scrollTimeline(page, 4000)
+  // From the pause before the first line to the middle of its fifth token, on the upper row.
+  const fifth = before[4]!
+  const from = await timelinePoint(page, before[0]!.start_ms! - 300, 0)
+  const to = await timelinePoint(page, (fifth.start_ms! + fifth.end_ms!) / 2, 0)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y + 8, { steps: 5 })
+  await page.mouse.up()
+  for (let index = 0; index < 5; index += 1) {
+    await expect(page.getByTestId(`token-0-${index}`)).toHaveClass(/selected/)
+  }
+  await expect(page.getByTestId('token-0-5')).not.toHaveClass(/selected/)
+
+  // Drag one of the selected blocks: the whole selection follows.
+  const third = before[2]!
+  const grab = await timelinePoint(page, (third.start_ms! + third.end_ms!) / 2, 0)
+  await page.mouse.move(grab.x, grab.y)
+  await page.mouse.down()
+  await page.mouse.move(grab.x + 10, grab.y, { steps: 3 })
+  await page.mouse.move(grab.x + 20, grab.y, { steps: 3 })
+  await page.mouse.up()
+  await waitSaved(page)
+  const after = (await serverProject(request, 'demo')).lines[0]!.tokens
+  const shift = after[0]!.start_ms! - before[0]!.start_ms!
+  expect(shift).toBeGreaterThan(0)
+  for (let index = 0; index < 5; index += 1) {
+    expect(after[index]!.start_ms! - before[index]!.start_ms!).toBe(shift)
+    expect(after[index]!.locked).toBe(true)
+  }
+  // The token after the selection keeps its start, and the selection still runs into it.
+  expect(after[5]!.start_ms).toBe(before[5]!.start_ms)
+  expect(after[4]!.end_ms).toBe(after[5]!.start_ms)
+  expect(after[5]!.locked).toBe(before[5]!.locked)
+  // The whole drag is one undo step.
+  await page.keyboard.press('Control+z')
+  await waitSaved(page)
+  expect((await serverProject(request, 'demo')).lines[0]!.tokens).toEqual(before)
+})
+
+test('with overlapping lines switched on, a line can be dragged over the previous one', async ({
+  page,
+  request,
+}) => {
+  await openEditor(page, 'demo')
+  const toggle = page.getByTestId('allow-overlap')
+  await expect(toggle).not.toBeChecked()
+  await toggle.check()
+  const before = await serverProject(request, 'demo')
+  const previous = before.lines[0]!.tokens
+  const line = before.lines[1]!.tokens
+  const last = previous[previous.length - 1]!
+  // Select the second line in the lyrics, then drag its first block back by 4.5 s: further than
+  // one sequence allows (the start of the previous line's last token).
+  await page.getByTestId('token-1-0').click()
+  await page.getByTestId(`token-1-${line.length - 1}`).click({ modifiers: ['Shift'] })
+  await scrollTimeline(page, 6000)
+  const grab = await timelinePoint(page, (line[0]!.start_ms! + line[0]!.end_ms!) / 2, 1)
+  const pxPerSec = Number(await page.getByTestId('timeline').getAttribute('data-px-per-sec'))
+  await page.mouse.move(grab.x, grab.y)
+  await page.mouse.down()
+  await page.mouse.move(grab.x - 2.25 * pxPerSec, grab.y, { steps: 4 })
+  await page.mouse.move(grab.x - 4.5 * pxPerSec, grab.y, { steps: 4 })
+  await page.mouse.up()
+  await waitSaved(page)
+  const after = await serverProject(request, 'demo')
+  const moved = after.lines[1]!.tokens
+  const shift = moved[0]!.start_ms! - line[0]!.start_ms!
+  // It now starts while the last token of the line before is still being sung...
+  expect(moved[0]!.start_ms!).toBeLessThan(last.start_ms!)
+  expect(moved.every((token, index) => token.start_ms! - line[index]!.start_ms! === shift)).toBe(true)
+  // ...and that line was left alone.
+  expect(after.lines[0]!.tokens).toEqual(previous)
+
+  // Re-aligning would push the overlap apart: the dialog says the overlapping tokens get locked.
+  await page.getByRole('button', { name: '重新對齊' }).click()
+  await expect(page.getByTestId('realign-overlap')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: '關閉' }).click()
+
+  await page.keyboard.press('Control+z')
+  await waitSaved(page)
+  expect((await serverProject(request, 'demo')).lines).toEqual(before.lines)
+  // The choice is remembered for this project.
+  await page.reload()
+  await expect(page.getByTestId('allow-overlap')).toBeChecked()
 })
 
 test('editing the text keeps the timing of the tokens that are still there', async ({ page, request }) => {

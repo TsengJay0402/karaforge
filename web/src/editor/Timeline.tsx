@@ -2,6 +2,11 @@
  * The timeline: ruler, waveform (or spectrogram) of the vocal stem, detected onsets, and one
  * draggable block per token.  Everything is drawn on a single canvas; the pure geometry
  * (time ↔ pixels, hit testing, waveform columns) lives in `timeline.ts`.
+ *
+ * Pointer gestures: on the ruler and the waveform a press seeks and a drag scrubs; in the
+ * token rows a drag on empty space draws a selection box (Shift / Ctrl add to the selection)
+ * and a click seeks.  Dragging a block moves its token, or the whole selection when the
+ * block is part of it; dragging an edge moves that start or end.
  */
 import { useQuery } from '@tanstack/react-query'
 import { type PointerEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -9,7 +14,17 @@ import { type PointerEvent, useCallback, useEffect, useLayoutEffect, useRef, use
 import { api } from '../api/client.ts'
 import type { Project, Token } from '../api/types.ts'
 import { useEditor, useEditorState } from './context.ts'
-import { isTimed, moveToken, refKey, sameRef, setTokenEnd, setTokenStart, type TokenRef, tokenAt } from './doc.ts'
+import {
+  isTimed,
+  moveSelection,
+  moveToken,
+  refKey,
+  sameRef,
+  setTokenEnd,
+  setTokenStart,
+  type TokenRef,
+  tokenAt,
+} from './doc.ts'
 import type { SelectMode } from './store.ts'
 import { confidenceClass } from './tokens.ts'
 import {
@@ -24,6 +39,7 @@ import {
   rulerStep,
   snapToOnset,
   timeToX,
+  tokensInBox,
   type View,
   visibleMs,
   waveformColumns,
@@ -36,6 +52,8 @@ const WAVE_H = 92
 const ROW_H = 30
 const ROW_GAP = 4
 const ROWS_TOP = RULER_H + WAVE_H + 6
+/** Below the waveform: a drag on empty space here draws a selection box instead of scrubbing. */
+const ROWS_AREA_TOP = RULER_H + WAVE_H
 export const TIMELINE_HEIGHT = ROWS_TOP + 2 * ROW_H + ROW_GAP + 6
 const SNAP_PX = 8
 const DRAG_THRESHOLD_PX = 3
@@ -55,6 +73,8 @@ const COLORS = {
   low: '#b8463f',
   locked: '#3d6fd1',
   current: '#ffe14d',
+  box: 'rgba(255, 255, 255, 0.12)',
+  boxEdge: 'rgba(255, 255, 255, 0.75)',
 } as const
 
 function rowOf(y: number): number | null {
@@ -63,6 +83,18 @@ function rowOf(y: number): number | null {
   if (offset < ROW_H) return 0
   if (offset >= ROW_H + ROW_GAP && offset < 2 * ROW_H + ROW_GAP) return 1
   return null
+}
+
+/**
+ * The rows that a selection box from `y0` to `y1` covers.  The space around the rows belongs
+ * to the nearest one, so that a box always covers at least one row.
+ */
+function rowsBetween(y0: number, y1: number): number[] {
+  const split = ROWS_TOP + ROW_H + ROW_GAP / 2
+  const rows: number[] = []
+  if (Math.min(y0, y1) < split) rows.push(0)
+  if (Math.max(y0, y1) >= split) rows.push(1)
+  return rows
 }
 
 function blockColor(token: Token): string {
@@ -74,12 +106,24 @@ function blockColor(token: Token): string {
 }
 
 interface Drag {
-  kind: 'token' | 'scrub'
+  kind: 'token' | 'scrub' | 'box'
   hit?: Hit
   originX: number
+  originY: number
   startMs: number
   endMs: number
   moved: boolean
+  /** Dragging a token's body: the tokens that move with it (the selection it belongs to). */
+  group?: TokenRef[]
+  /** Drawing a selection box: the selection it adds to (Shift / Ctrl held), else nothing. */
+  base?: TokenRef[]
+}
+
+interface Box {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
 }
 
 interface Tile {
@@ -115,6 +159,7 @@ export function Timeline() {
 
   const canvas = useRef<HTMLCanvasElement>(null)
   const drag = useRef<Drag | null>(null)
+  const box = useRef<Box | null>(null)
   const tiles = useRef(new Map<string, Tile>())
   const [width, setWidth] = useState(800)
   const [startMs, setStartMs] = useState(0)
@@ -222,6 +267,19 @@ export function Timeline() {
         context.fillText(token.text.trim(), block.x + 4, y + ROW_H / 2 + 1)
         context.restore()
       }
+    }
+
+    // Selection box.
+    const shown = box.current
+    if (shown) {
+      const left = Math.min(shown.x0, shown.x1)
+      const top = Math.min(shown.y0, shown.y1)
+      const boxWidth = Math.abs(shown.x1 - shown.x0)
+      const boxHeight = Math.abs(shown.y1 - shown.y0)
+      context.fillStyle = COLORS.box
+      context.fillRect(left, top, boxWidth, boxHeight)
+      context.strokeStyle = COLORS.boxEdge
+      context.strokeRect(Math.round(left) + 0.5, Math.round(top) + 0.5, Math.round(boxWidth), Math.round(boxHeight))
     }
 
     // Playhead.
@@ -344,18 +402,36 @@ export function Timeline() {
       if (mode !== 'replace' || !already) state.select(hit.ref, mode)
       if (state.tapMode !== 'off') state.setTapCursor(hit.ref)
       if (isTimed(token)) {
+        // The body of a selected block carries the rest of the selection along.
+        const selection = store.getState().selection
+        const inSelection = selection.some((item) => sameRef(item, hit.ref))
         drag.current = {
           kind: 'token',
           hit,
           originX: x,
+          originY: y,
           startMs: token.start_ms,
           endMs: token.end_ms,
           moved: false,
+          group: hit.part === 'body' && inSelection && selection.length > 1 ? selection : [hit.ref],
         }
       }
       return
     }
-    drag.current = { kind: 'scrub', originX: x, startMs: 0, endMs: 0, moved: false }
+    if (y >= ROWS_AREA_TOP) {
+      const additive = event.shiftKey || event.ctrlKey || event.metaKey
+      drag.current = {
+        kind: 'box',
+        originX: x,
+        originY: y,
+        startMs: 0,
+        endMs: 0,
+        moved: false,
+        base: additive ? store.getState().selection : [],
+      }
+      return
+    }
+    drag.current = { kind: 'scrub', originX: x, originY: y, startMs: 0, endMs: 0, moved: false }
     transport.seek(xToTime(view, x))
   }
 
@@ -364,35 +440,57 @@ export function Timeline() {
     const active = drag.current
     if (!active) {
       const hit = hitAt(x, y)
-      setCursor(hit ? (hit.part === 'body' ? 'grab' : 'ew-resize') : 'default')
+      setCursor(hit ? (hit.part === 'body' ? 'grab' : 'ew-resize') : y >= ROWS_AREA_TOP ? 'crosshair' : 'default')
       return
     }
     if (active.kind === 'scrub') {
       transport.seek(xToTime(view, x))
       return
     }
+    const distance =
+      active.kind === 'box'
+        ? Math.max(Math.abs(x - active.originX), Math.abs(y - active.originY))
+        : Math.abs(x - active.originX)
+    if (!active.moved && distance < DRAG_THRESHOLD_PX) return
+    if (active.kind === 'box') {
+      active.moved = true
+      box.current = { x0: active.originX, y0: active.originY, x1: x, y1: y }
+      const covered = tokensInBox(doc, xToTime(view, active.originX), xToTime(view, x), rowsBetween(active.originY, y))
+      const next = [...new Map([...(active.base ?? []), ...covered].map((ref) => [refKey(ref), ref])).values()]
+      // Only a change of the selection re-renders the editor; the box itself is just drawn.
+      if (next.map(refKey).join(' ') !== store.getState().selection.map(refKey).join(' ')) {
+        store.getState().setSelection(next)
+      }
+      draw()
+      return
+    }
     const hit = active.hit
     if (!hit || readOnly) return
-    if (!active.moved && Math.abs(x - active.originX) < DRAG_THRESHOLD_PX) return
     active.moved = true
     const delta = ((x - active.originX) / view.pxPerSec) * 1000
     const ref: TokenRef = hit.ref
     const mergeKey = `drag:${refKey(ref)}:${hit.part}`
-    const edit = store.getState().edit
+    const state = store.getState()
+    const options = { allowOverlap: state.allowOverlap }
+    const edit = state.edit
     if (hit.part === 'start') {
       const target = snapped(active.startMs + delta)
-      edit((draft: Project) => setTokenStart(draft, ref, target), { label: 'drag start', mergeKey })
+      edit((draft: Project) => setTokenStart(draft, ref, target, options), { label: 'drag start', mergeKey })
     } else if (hit.part === 'end') {
       const target = snapped(active.endMs + delta)
-      edit((draft: Project) => setTokenEnd(draft, ref, target), { label: 'drag end', mergeKey })
+      edit((draft: Project) => setTokenEnd(draft, ref, target, options), { label: 'drag end', mergeKey })
     } else {
+      // The grabbed token snaps; the rest of a selection keeps its distance to it.
       const target = snapped(active.startMs + delta)
+      const group = active.group ?? [ref]
       edit(
         (draft: Project) => {
           const now = tokenAt(draft, ref)?.start_ms
-          if (now != null) moveToken(draft, ref, target - now)
+          if (now == null) return
+          if (group.length > 1) moveSelection(draft, group, target - now, options)
+          else moveToken(draft, ref, target - now, options)
         },
-        { label: 'drag', mergeKey },
+        { label: 'drag', mergeKey: group.length > 1 ? `${mergeKey}:group` : mergeKey },
       )
     }
   }
@@ -402,6 +500,13 @@ export function Timeline() {
     drag.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    if (active?.kind === 'box') {
+      box.current = null
+      // A click on empty space in the rows: go there, as on the waveform.
+      if (!active.moved) transport.seek(xToTime(view, active.originX))
+      draw()
+      return
     }
     if (active?.kind === 'token' && !active.moved && active.hit) {
       // A plain click on a block: go there.

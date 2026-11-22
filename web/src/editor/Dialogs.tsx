@@ -7,8 +7,8 @@ import type { Job } from '../api/types.ts'
 import { ErrorBox, JobProgress, Modal } from '../components/common.tsx'
 import { formatBytes, type MessageKey, useI18n, useT } from '../i18n/index.ts'
 import { useEditor, useEditorState } from './context.ts'
-import { allRefs, lineRefs, shiftTokens } from './doc.ts'
-import { HOTKEYS } from './hotkeys.ts'
+import { allRefs, lineRefs, overlappingRefs, setLocked, shiftTokens, tokenAt } from './doc.ts'
+import { HOTKEYS, MOUSE_ACTIONS } from './hotkeys.ts'
 import { selectedLines } from './store.ts'
 
 export function HotkeyHelp({ onClose }: { onClose: () => void }) {
@@ -24,6 +24,17 @@ export function HotkeyHelp({ onClose }: { onClose: () => void }) {
                   <kbd key={key}>{key}</kbd>
                 ))}
               </th>
+              <td>{t(item.description)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3>{t('help.mouse')}</h3>
+      <table className="hotkeys">
+        <tbody>
+          {MOUSE_ACTIONS.map((item) => (
+            <tr key={item.action}>
+              <th>{t(item.action)}</th>
               <td>{t(item.description)}</td>
             </tr>
           ))}
@@ -105,11 +116,20 @@ export function RealignDialog({ onClose }: { onClose: () => void }) {
   const { id, store } = useEditor()
   const selection = useEditorState((state) => state.selection)
   const doc = useEditorState((state) => state.history.present)
+  const allowOverlap = useEditorState((state) => state.allowOverlap)
   const lines = selectedLines(selection)
   const [failure, setFailure] = useState<unknown>(null)
+  // The aligner keeps every line clear of the locked tokens of the others, so an unlocked
+  // token that overlaps another line on purpose (a duet) would be pushed out of the way.
+  const unlockedOverlaps = allowOverlap
+    ? overlappingRefs(doc).filter((ref) => tokenAt(doc, ref)?.locked === false)
+    : []
 
   const start = async (onlySelected: boolean) => {
     try {
+      if (unlockedOverlaps.length > 0) {
+        store.getState().edit((draft) => setLocked(draft, unlockedOverlaps, true), { label: 'lock overlaps' })
+      }
       // The server aligns what is saved: make sure it has the latest corrections.
       await store.getState().saveNow()
       const ids = onlySelected ? lines.map((line) => doc.lines[line]?.id).filter((x): x is string => !!x) : undefined
@@ -123,6 +143,11 @@ export function RealignDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={t('editor.realign')} onClose={onClose}>
       <p className="hint">{t('editor.realign.hint')}</p>
+      {unlockedOverlaps.length > 0 ? (
+        <p className="hint" data-testid="realign-overlap">
+          {t('editor.realign.overlap', { count: unlockedOverlaps.length })}
+        </p>
+      ) : null}
       {failure ? <ErrorBox error={toErrorBody(failure)} /> : null}
       <div className="form">
         <button type="button" className="primary" data-testid="realign-all" onClick={() => void start(false)}>

@@ -101,6 +101,9 @@ export const en: Record<MessageKey, string> = {
   'editor.rate': 'Speed',
   'editor.snap': 'Snap to onsets',
   'editor.spectrogram': 'Spectrogram',
+  'editor.overlap': 'Overlapping lines',
+  'editor.overlap.hint':
+    'Duets and harmonies: lines may overlap in time (both rows are sung at once); dragging, arrow keys and tapping are limited only by the tokens of the same line. Remembered per project.',
   'editor.waveform': 'Waveform',
   'editor.undo': 'Undo',
   'editor.redo': 'Redo',
@@ -113,6 +116,8 @@ export const en: Record<MessageKey, string> = {
   'editor.realign.all': 'Whole song (locked tokens stay)',
   'editor.realign.lines': 'Only the {count} selected lines',
   'editor.realign.hint': 'Locked tokens are anchors; everything else is aligned again.',
+  'editor.realign.overlap':
+    'Overlapping lines are on: {count} unlocked tokens overlap another line and will be locked first, so that re-aligning does not push the overlap apart.',
   'editor.shift': 'Shift timing',
   'editor.shift.all': 'Whole song',
   'editor.shift.line': 'Selected lines',
@@ -227,4 +232,11 @@ export const en: Record<MessageKey, string> = {
   'help.save': 'Save now',
   'help.help': 'Show this help',
   'help.escape': 'Leave tap mode / clear the selection',
+  'help.mouse': 'Mouse (timeline)',
+  'help.mouse.box': 'Drag on empty space in the token rows',
+  'help.mouse.boxHint': 'Select the tokens in the box; with Shift or Ctrl, add to the selection',
+  'help.mouse.group': 'Drag a selected token',
+  'help.mouse.groupHint': 'Move the whole selection together',
+  'help.mouse.edge': 'Drag the edge of a token',
+  'help.mouse.edgeHint': 'Change only its start or end time',
 }

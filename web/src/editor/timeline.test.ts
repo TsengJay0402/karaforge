@@ -1,4 +1,4 @@
-import { project, timedLine } from '../test/fixtures.ts'
+import { project, timedLine, token } from '../test/fixtures.ts'
 import {
   blocks,
   chooseLevel,
@@ -10,6 +10,7 @@ import {
   rulerStep,
   snapToOnset,
   timeToX,
+  tokensInBox,
   type View,
   visibleMs,
   waveformColumns,
@@ -142,5 +143,38 @@ describe('waveform', () => {
     expect(Array.from(coarse.max)).toEqual([1, 3])
     const beyond = waveformColumns(peaks, { startMs: 7990, pxPerSec: 100, width: 3 })
     expect(Array.from(beyond.max)).toEqual([99, 0, 0])
+  })
+})
+
+describe('selection box', () => {
+  const doc = project([
+    timedLine('L001', ['一', '二', '三'], 1000),
+    timedLine('L002', ['四', '五'], 3000),
+    timedLine('L003', ['六'], 5000),
+  ])
+
+  it('takes the tokens of the covered rows whose time overlaps the box', () => {
+    // Lines alternate between the rows: lines 1 and 3 are drawn in row 0, line 2 in row 1.
+    expect(tokensInBox(doc, 1500, 3200, [0])).toEqual([
+      { line: 0, index: 1 },
+      { line: 0, index: 2 },
+    ])
+    expect(tokensInBox(doc, 3200, 1500, [0, 1])).toEqual([
+      { line: 0, index: 1 },
+      { line: 0, index: 2 },
+      { line: 1, index: 0 },
+    ])
+    expect(tokensInBox(doc, 0, 99_000, [1])).toEqual([
+      { line: 1, index: 0 },
+      { line: 1, index: 1 },
+    ])
+  })
+
+  it('takes the token a narrow box lies in, and never an untimed one', () => {
+    expect(tokensInBox(doc, 1600, 1600, [0])).toEqual([{ line: 0, index: 1 }])
+    // A token that ends where the box starts is not in it.
+    expect(tokensInBox(doc, 1400, 1450, [0])).toEqual([{ line: 0, index: 1 }])
+    const untimed = project([{ ...timedLine('L001', [], 0), tokens: [token('啊', null, null)] }])
+    expect(tokensInBox(untimed, 0, 99_000, [0, 1])).toEqual([])
   })
 })

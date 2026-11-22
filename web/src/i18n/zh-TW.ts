@@ -96,6 +96,9 @@ export const zhTW = {
   'editor.rate': '速度',
   'editor.snap': '吸附起音點',
   'editor.spectrogram': '頻譜圖',
+  'editor.overlap': '允許跨行重疊',
+  'editor.overlap.hint':
+    '和聲、對唱：開啟後不同行可以在時間上重疊（上下兩排同時跑字），拖曳、方向鍵與打點只受同一行的前後字限制。每個專案分開記住。',
   'editor.waveform': '波形',
   'editor.undo': '復原',
   'editor.redo': '重做',
@@ -108,6 +111,8 @@ export const zhTW = {
   'editor.realign.all': '整首歌（保留鎖定的字）',
   'editor.realign.lines': '只對選取的 {count} 行',
   'editor.realign.hint': '鎖定的字會被當成錨點，其餘的字重新對齊。',
+  'editor.realign.overlap':
+    '已開啟跨行重疊：有 {count} 個字和其他行重疊、還沒鎖定，會先替它們鎖定，免得重新對齊把重疊的部分擠開。',
   'editor.shift': '時間位移',
   'editor.shift.all': '整首歌',
   'editor.shift.line': '選取的行',
@@ -220,6 +225,13 @@ export const zhTW = {
   'help.save': '立刻儲存',
   'help.help': '顯示這個說明',
   'help.escape': '結束打點模式／取消選取',
+  'help.mouse': '滑鼠（時間軸）',
+  'help.mouse.box': '在字列的空白處拖曳',
+  'help.mouse.boxHint': '框選範圍內的字；按住 Shift 或 Ctrl 是加選',
+  'help.mouse.group': '拖曳已選取的字',
+  'help.mouse.groupHint': '選取的字整組一起移動',
+  'help.mouse.edge': '拖曳字的左右邊緣',
+  'help.mouse.edgeHint': '只調整開始或結束時間',
 } as const
 
 export type MessageKey = keyof typeof zhTW
