@@ -110,7 +110,7 @@ kf batch ./songs/ --out ./exports/
 
 ### `kf doctor`
 
-檢查環境：Python、ffmpeg（是否含 libass 與必要的編碼器）、模型會跑在 CPU 還是 GPU、字型與主題、資料目錄的可用空間、各設定檔還缺哪些模型。
+檢查環境：Python、ffmpeg（是否含 libass 與必要的編碼器）、選用的 yt-dlp、模型會跑在 CPU 還是 GPU、字型與主題、資料目錄的可用空間、各設定檔還缺哪些模型。
 `--json` 輸出機器可讀的結果，`--no-models` 略過模型檢查。只有出現「✗」的項目時結束代碼才是 1。
 
 ### `kf bench`
@@ -129,4 +129,5 @@ kf batch ./songs/ --out ./exports/
 | `KARAFORGE_OFFLINE` | 設為 `1` 時不嘗試下載任何東西；缺少模型會直接報錯 |
 | `KARAFORGE_ACCEPT_LICENSES` | 以逗號分隔的模型 id：同意它們的非商業授權（等同 `kf models download --accept-license`） |
 | `KARAFORGE_FFMPEG`、`KARAFORGE_FFPROBE` | ffmpeg／ffprobe 執行檔的路徑（預設從 `PATH` 找） |
+| `KARAFORGE_YTDLP` | yt-dlp 執行檔的路徑（預設從 `PATH` 找；只有用影片網址建立專案時需要） |
 | `KARAFORGE_WEB_DIST` | 前端打包結果的位置（開發用） |

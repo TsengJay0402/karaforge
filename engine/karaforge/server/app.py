@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import json
 import mimetypes
 import os
@@ -77,6 +78,12 @@ class LyricsBody(BaseModel):
     text: str
     filename: str = "lyrics.txt"
     revision: int
+
+
+class LinkBody(BaseModel):
+    """A video link to look up."""
+
+    url: str
 
 
 class RetokenizeBody(BaseModel):
@@ -159,6 +166,8 @@ def create_app(settings: ServerSettings) -> FastAPI:
         params = job.params
         if job.kind == "models":
             return _download_models(params, progress, job)
+        if job.kind == "import":
+            return import_from_link(job, progress)
         assert job.project_id is not None
         store = workspace.store(job.project_id)
         profile = profile_for(params.get("profile"), params.get("settings"))
@@ -202,6 +211,40 @@ def create_app(settings: ServerSettings) -> FastAPI:
             _project_changed(job.project_id, "job")
 
     jobs = JobManager(bus, run_job)
+
+    def import_from_link(job: Job, progress: Callable[[float, str], None]) -> dict[str, Any]:
+        """Download the video of a link, make a project of it and (optionally) process it."""
+        from karaforge.project.create import create_project as make_project
+        from karaforge.tools import ytdlp
+
+        params = job.params
+        folder = workspace.uploads / str(params["upload"])
+        try:
+            target = folder / "download"
+            target.mkdir(parents=True, exist_ok=True)
+            fetched = ytdlp.download(
+                str(params["url"]), target, progress=progress, cancel=job.cancel
+            )
+            job.cancel.raise_if_cancelled()
+            title = str(params.get("title") or "") or fetched.title
+            artist = str(params.get("artist") or "") or fetched.artist
+            lyrics = folder / str(params["lyrics"]) if params.get("lyrics") else None
+            project_id = workspace.new_id(title or "video")
+            make_project(
+                fetched.path,
+                workspace.folder(project_id),
+                lyrics=lyrics,
+                language=str(params.get("language") or "") or None,
+                title=title or None,
+                artist=artist or None,
+            )
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+        process: Job | None = None
+        if params.get("start"):
+            process = jobs.submit("process", project_id, {"profile": params.get("profile")})
+        _project_changed(project_id, "created")
+        return {"project_id": project_id, "job": process.id if process else None}
 
     def _project_changed(project_id: str, reason: str) -> None:
         revision: int | None = None
@@ -295,6 +338,64 @@ def create_app(settings: ServerSettings) -> FastAPI:
             job = jobs.submit("process", project_id, {"profile": profile})
         _project_changed(project_id, "created")
         return {"project": summary(project_id), "job": job.to_dict() if job else None}
+
+    @app.post("/api/media/probe")
+    async def probe_link(body: LinkBody) -> dict[str, Any]:
+        from karaforge.tools import ytdlp
+
+        media = await asyncio.to_thread(ytdlp.probe, body.url)
+        return {"media": media.to_dict()}
+
+    @app.post("/api/projects/import", status_code=202)
+    async def import_project(
+        url: Annotated[str, Form()],
+        lyrics: Annotated[str | None, Form()] = None,
+        lyrics_file: Annotated[UploadFile | None, File()] = None,
+        title: Annotated[str | None, Form()] = None,
+        artist: Annotated[str | None, Form()] = None,
+        language: Annotated[str | None, Form()] = None,
+        profile: Annotated[str | None, Form()] = None,
+        start: Annotated[bool, Form()] = True,
+    ) -> dict[str, Any]:
+        from karaforge.io.importers import load_lyrics
+        from karaforge.tools import ytdlp
+
+        # Everything that can be refused is refused now, not after a long download.
+        if profile is not None:
+            get_profile(profile)
+        address = ytdlp.require_url(url)
+        ytdlp.find_ytdlp()
+        upload = uuid.uuid4().hex
+        folder = workspace.uploads / upload
+        folder.mkdir(parents=True)
+        try:
+            lyrics_name: str | None = None
+            if lyrics_file is not None and lyrics_file.filename:
+                lyrics_name = "lyrics" + Path(lyrics_file.filename).suffix.lower()
+                (folder / lyrics_name).write_bytes(await lyrics_file.read())
+            elif lyrics is not None and lyrics.strip():
+                lyrics_name = "lyrics.txt"
+                (folder / lyrics_name).write_text(lyrics, encoding="utf-8")
+            if lyrics_name is not None:
+                load_lyrics(folder / lyrics_name)
+        except BaseException:
+            shutil.rmtree(folder, ignore_errors=True)
+            raise
+        job = jobs.submit(
+            "import",
+            None,
+            {
+                "url": address,
+                "title": (title or "").strip(),
+                "artist": (artist or "").strip(),
+                "language": language or "",
+                "profile": profile,
+                "start": start,
+                "upload": upload,
+                "lyrics": lyrics_name,
+            },
+        )
+        return {"job": job.to_dict()}
 
     @app.get("/api/projects/{project_id}")
     def get_project(project_id: str) -> dict[str, Any]:
@@ -887,12 +988,24 @@ def _scaled(
     return report
 
 
+@functools.lru_cache(maxsize=4)
+def _ytdlp_version(executable: str, modified: float) -> str | None:
+    """The version of a yt-dlp executable; remembered until the file changes (an update)."""
+    from karaforge.tools import ytdlp
+
+    del modified  # only part of the cache key
+    try:
+        return ytdlp.version(executable)
+    except KaraForgeError:
+        return None
+
+
 def _system_info(settings: ServerSettings, workspace: Workspace) -> dict[str, Any]:
     from karaforge.adapters.registry import describe_profile, qwen_available, resolve_aligner
     from karaforge.device import resolve_device
     from karaforge.exporting import FORMATS
     from karaforge.models import get_model, is_installed
-    from karaforge.tools import ffmpeg
+    from karaforge.tools import ffmpeg, ytdlp
 
     ffmpeg_info: dict[str, Any]
     try:
@@ -905,6 +1018,14 @@ def _system_info(settings: ServerSettings, workspace: Workspace) -> dict[str, An
         }
     except KaraForgeError as error:
         ffmpeg_info = {"found": False, "version": None, "libass": False, "error": error.to_dict()}
+
+    ytdlp_info: dict[str, Any]
+    try:
+        executable = ytdlp.find_ytdlp()
+        version = _ytdlp_version(executable, Path(executable).stat().st_mtime)
+        ytdlp_info = {"found": True, "version": version}
+    except (KaraForgeError, OSError):
+        ytdlp_info = {"found": False, "version": None}
 
     profiles: list[dict[str, Any]] = []
     for name in profile_names():
@@ -938,6 +1059,7 @@ def _system_info(settings: ServerSettings, workspace: Workspace) -> dict[str, An
             "fallback_reason_en": device.fallback_reason_en,
         },
         "ffmpeg": ffmpeg_info,
+        "ytdlp": ytdlp_info,
         "qwen": qwen_available(),
         "formats": [
             {

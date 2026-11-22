@@ -203,3 +203,26 @@ def test_progress_is_clamped(fraction: float) -> None:
     wait_for(job, "cancelled")
     assert job.progress == min(1.0, max(0.0, fraction))
     manager.shutdown()
+
+
+def test_a_download_does_not_wait_for_a_song_being_processed() -> None:
+    release = threading.Event()
+
+    def runner(job: Job, progress: Progress, on_stage: OnStage) -> dict[str, Any]:
+        if job.kind == "process":
+            assert release.wait(5)
+        return {"kind": job.kind}
+
+    manager = JobManager(Recorder(), runner)
+    try:
+        busy = manager.submit("process", "song", {})
+        wait_for(busy, "running")
+        waiting = manager.submit("export", "song", {})
+        download = manager.submit("import", None, {})
+        # The download has a worker of its own; the export still waits for the processing.
+        wait_for(download, "done")
+        assert (busy.state, waiting.state) == ("running", "queued")
+    finally:
+        release.set()
+    wait_for(waiting, "done")
+    manager.shutdown()

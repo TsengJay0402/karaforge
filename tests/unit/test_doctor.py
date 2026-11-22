@@ -11,6 +11,7 @@ import pytest
 from karaforge import doctor
 from karaforge.doctor import Check, check_ffmpeg, check_home, check_python, run_checks, worst
 from karaforge.tools.ffmpeg import FFmpegCapabilities, FFmpegError, FFmpegTools
+from support import install_fake_ytdlp
 
 FAKE_TOOLS = FFmpegTools(ffmpeg="/usr/bin/ffmpeg", ffprobe="/usr/bin/ffprobe")
 GOOD_CAPABILITIES = FFmpegCapabilities(
@@ -249,3 +250,17 @@ def test_check_device_reports_the_cpu_as_a_warning(monkeypatch: pytest.MonkeyPat
     check = doctor.check_device()
     assert check.status == "ok"
     assert "Test GPU" in check.message_en
+
+
+def test_check_ytdlp_is_optional(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setenv("KARAFORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("KARAFORGE_YTDLP", raising=False)
+    missing = doctor.check_ytdlp()
+    assert missing.status == "ok"  # uploading files works without it
+    assert missing.hint_zh is not None and "brew install yt-dlp" in missing.hint_zh
+    for name, value in install_fake_ytdlp(tmp_path / "bin").items():
+        monkeypatch.setenv(name, value)
+    found = doctor.check_ytdlp()
+    assert found.status == "ok" and found.hint_en is None
+    assert "yt-dlp 2099.01.01" in found.message_en

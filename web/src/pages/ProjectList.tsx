@@ -82,6 +82,26 @@ function Card({ summary, onDelete }: { summary: ProjectSummary; onDelete: () => 
   )
 }
 
+/** Videos being downloaded from a link: their projects appear once the download is done. */
+function Imports() {
+  const t = useT()
+  const jobs = useJobs((state) => state.jobs)
+  const active = Object.values(jobs)
+    .filter((job) => job.kind === 'import' && isActive(job))
+    .sort((a, b) => a.created_at - b.created_at)
+  if (active.length === 0) return null
+  return (
+    <ul className="imports">
+      {active.map((job) => (
+        <li key={job.id} className="import" data-testid="import-job">
+          <strong>{t('list.importing', { title: String(job.params.title || job.params.url) })}</strong>
+          <JobProgress job={job} onCancel={() => void api.cancelJob(job.id)} />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function ProjectList() {
   const t = useT()
   const navigate = useNavigate()
@@ -135,6 +155,7 @@ export function ProjectList() {
       </div>
       {system.data ? <SystemNotices system={system.data} /> : null}
       {failure ? <ErrorBox error={toErrorBody(failure)} /> : null}
+      <Imports />
       {projects.isPending ? <Spinner /> : null}
       {projects.error ? <ErrorBox error={toErrorBody(projects.error)} /> : null}
       {projects.data?.length === 0 ? <p className="empty">{t('list.empty')}</p> : null}

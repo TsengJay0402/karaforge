@@ -25,7 +25,7 @@ from karaforge.project import ProjectStore
 from karaforge.server import ServerSettings, create_app
 from karaforge.server.jobs import JobManager
 from karaforge.server.workspace import Workspace, project_stats
-from support import song_project, timed_line
+from support import install_fake_ytdlp, song_project, timed_line
 
 
 def tone(seconds: float = 3.0, rate: int = 16000) -> bytes:
@@ -392,6 +392,121 @@ def test_a_project_with_a_running_job_cannot_be_deleted(
     assert wait_job(client, running["id"])["state"] == "cancelled"
     assert client.get("/api/projects/demo/exports").json()["exports"] == []
     assert client.delete("/api/projects/demo").status_code == 204
+
+
+# ------------------------------------------------------------------------ video links
+
+LINK = "https://youtu.be/abc123"
+
+
+@pytest.fixture
+def fake_ytdlp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Use the stand-in for yt-dlp; it "downloads" a short tone."""
+    media = tmp_path / "downloaded.wav"
+    media.write_bytes(tone())
+    for name, value in install_fake_ytdlp(tmp_path / "bin", media=media).items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("FAKE_YTDLP_MODE", raising=False)
+
+
+def test_a_video_link_is_described_before_anything_is_downloaded(
+    client: TestClient, fake_ytdlp: None
+) -> None:
+    assert client.get("/api/system").json()["ytdlp"] == {"found": True, "version": "2099.01.01"}
+    described = client.post("/api/media/probe", json={"url": LINK})
+    assert described.status_code == 200, described.text
+    media = described.json()["media"]
+    assert (media["title"], media["artist"]) == ("晴天 (Official MV)", "某歌手")
+    assert media["url"] == "https://www.youtube.com/watch?v=abc123"
+    assert media["duration_ms"] == 269_500 and media["has_video"] is True
+    refused = client.post("/api/media/probe", json={"url": "not a link"})
+    assert refused.status_code == 400
+    assert refused.json()["error"]["code"] == "download_failed"
+
+
+def test_a_project_is_made_from_a_video_link(
+    api: Api, fake_ytdlp: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import karaforge.stages.standard as standard
+
+    client = api.client
+    accepted = client.post(
+        "/api/projects/import",
+        data={
+            "url": LINK,
+            "title": "晴天",
+            "lyrics": "[女] 第一句\n第二句\n",
+            "language": "zh-TW",
+            "start": "false",
+        },
+    )
+    assert accepted.status_code == 202, accepted.text
+    job = accepted.json()["job"]
+    assert (job["kind"], job["project_id"], job["params"]["url"]) == ("import", None, LINK)
+    finished = wait_job(client, job["id"])
+    assert finished["state"] == "done", finished
+    assert finished["result"] == {"project_id": "晴天", "job": None}
+    project = client.get("/api/projects/晴天").json()["project"]
+    # The title typed in the wizard wins; the artist comes from the video.
+    assert (project["meta"]["title"], project["meta"]["artist"]) == ("晴天", "某歌手")
+    assert project["lines"][0]["singer"] == "f" and project["media"]["source"] == "media/source.wav"
+    assert not any(api.workspace.uploads.iterdir())
+
+    # Without a title the video's own is used; with start, processing is queued at once.
+    processed: list[str] = []
+
+    def fake_pipeline(store: ProjectStore, **_options: Any) -> Any:
+        processed.append(store.root.name)
+        return type("Report", (), {"executed": ["ingest"], "cached": []})()
+
+    monkeypatch.setattr(standard, "run_pipeline", fake_pipeline)
+    started = client.post("/api/projects/import", data={"url": LINK, "profile": "cpu-lite"})
+    finished = wait_job(client, started.json()["job"]["id"])
+    project_id = finished["result"]["project_id"]
+    assert client.get(f"/api/projects/{project_id}").json()["project"]["meta"]["title"] == (
+        "晴天 (Official MV)"
+    )
+    process = wait_job(client, finished["result"]["job"])
+    assert (process["kind"], process["project_id"], process["state"]) == (
+        "process", project_id, "done",
+    )  # fmt: skip
+    assert process["params"]["profile"] == "cpu-lite"
+    assert processed == [f"{project_id}.kfproj"]
+
+
+def test_link_imports_are_refused_before_anything_is_downloaded(
+    api: Api, fake_ytdlp: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = api.client
+    for data in ({"url": "youtube.com/watch?v=abc"}, {"url": LINK, "profile": "turbo"}):
+        assert client.post("/api/projects/import", data=data).status_code == 400, data
+    unreadable = client.post(
+        "/api/projects/import",
+        data={"url": LINK},
+        files={"lyrics_file": ("notes.docx", b"x", "application/octet-stream")},
+    )
+    assert unreadable.status_code == 400
+    monkeypatch.setenv("KARAFORGE_YTDLP", "/nowhere/yt-dlp")
+    missing = client.post("/api/projects/import", data={"url": LINK})
+    assert missing.status_code == 400 and missing.json()["error"]["code"] == "tool_missing"
+    assert client.get("/api/system").json()["ytdlp"] == {"found": False, "version": None}
+    assert api.jobs.list() == []
+    uploads = api.workspace.uploads
+    assert not uploads.exists() or not any(uploads.iterdir())
+
+
+def test_a_failed_download_explains_itself_and_leaves_nothing_behind(
+    api: Api, fake_ytdlp: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "error")
+    client = api.client
+    job = client.post("/api/projects/import", data={"url": LINK, "lyrics": "一句"}).json()["job"]
+    failed = wait_job(client, job["id"])
+    assert failed["state"] == "failed"
+    assert failed["error"]["message_zh"] == "無法下載這部影片：Video unavailable"
+    assert "yt-dlp -U" in failed["error"]["hint_zh"]
+    assert client.get("/api/projects").json() == {"projects": []}
+    assert not any(api.workspace.uploads.iterdir())
 
 
 # ------------------------------------------------------------------- themes and fonts

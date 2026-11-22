@@ -29,11 +29,13 @@ automatically, nothing corrected by hand.
 - **KTV layout.** Two alternating rows, left-to-right fill including the outline, a countdown
   after long pauses, male / female / duet colours, a title card, Zhuyin or Pinyin readings. Four
   built-in themes, adjustable in the editor.
-- **Many inputs and outputs.** Lyrics: plain text, LRC (line- or word-timed), SRT, ASS — or no
-  lyrics at all (speech recognition drafts them). Output: MP4, MKV (soft subtitles plus karaoke
+- **Many inputs and outputs.** Media: a video or audio file, or the link of a video on YouTube
+  or another site (optional, needs [yt-dlp](#optional-projects-from-a-video-link-yt-dlp)).
+  Lyrics: plain text, LRC (line- or word-timed), SRT, ASS — or no lyrics at all (speech
+  recognition drafts them). Output: MP4, MKV (soft subtitles plus karaoke
   and original audio tracks), ASS, LRC, enhanced LRC, SRT, UltraStar.
-- **Runs on your own machine.** Once the models are downloaded no network is needed; no account,
-  no telemetry. A CPU is enough, and every default model has a permissive licence.
+- **Runs on your own machine.** Once the models are downloaded no network is needed (unless you
+  choose to download a video from a link); no account, no telemetry. A CPU is enough, and every default model has a permissive licence.
 - **CLI and web UI share one project format** (a folder with a readable `project.json`); whole
   folders can be processed in a batch.
 
@@ -101,6 +103,18 @@ it found has libass; without it you can still export MKV and subtitle files, but
 lyrics into an MP4. Where system packages cannot be installed, ffmpeg can be wrapped in Docker:
 [docker/ffmpeg-wrapper/README.md](docker/ffmpeg-wrapper/README.md).
 
+### Optional: projects from a video link (yt-dlp)
+
+With [yt-dlp](https://github.com/yt-dlp/yt-dlp) installed, "New project" also takes the link of a
+video on YouTube or another site: it shows the thumbnail, title and length first, downloads in
+the background once you start (at most 1080p, preferring H.264 with stereo AAC in an MP4) and
+then processes the song as usual. Install it with `brew install yt-dlp` (macOS) or
+`pipx install yt-dlp`. YouTube also needs a JavaScript runtime such as [deno](https://deno.com/).
+Video sites change often: when a download fails, update yt-dlp first (`yt-dlp -U`,
+`brew upgrade yt-dlp` or `pipx upgrade yt-dlp`). KaraForge looks for yt-dlp on `PATH`, or where
+`KARAFORGE_YTDLP` points; `kf doctor` shows the version it found. The Docker image does not
+include yt-dlp.
+
 ### Docker
 
 ```bash
@@ -145,9 +159,10 @@ A lyrics file is one line per row (format: [docs/lyrics-format.md](docs/lyrics-f
 [合] 我們一起唱 la la la
 ```
 
-In the web UI: create a project (drop the media, paste the lyrics, pick a quality), wait for
-processing, then check the highlighted characters. Drag a character on the timeline, or press
-`1` for tap mode and hit the space bar at the start of each character while the song plays.
+In the web UI: create a project (drop the media or paste a video link, paste the lyrics, pick a
+quality), wait for processing, then check the highlighted characters. Drag a character on the
+timeline, or press `1` for tap mode and hit the space bar at the start of each character while
+the song plays.
 After a few corrections press "Re-align"; then "Export".
 
 Step by step on the command line:
@@ -216,7 +231,8 @@ Most documentation is written in Traditional Chinese: [CLI](docs/cli.md) ·
 
 KaraForge ships no songs, videos or lyrics. **You are responsible for making sure you hold (or
 have obtained) the rights to the music and lyrics you use**, and for how you use the exported
-videos. Distributing a karaoke video of a copyrighted song normally requires permission.
+videos. Distributing a karaoke video of a copyrighted song normally requires permission. When
+downloading a video from a link, follow the terms of that site as well.
 
 ## Licence
 

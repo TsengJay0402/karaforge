@@ -283,3 +283,24 @@ def fill_position(plan_line: PlanLine, time_ms: float) -> float:
             share = (time_ms - earlier.time_ms) / (later.time_ms - earlier.time_ms)
             return earlier.x + share * (later.x - earlier.x)
     return keys[-1].x
+
+
+FAKE_YTDLP = Path(__file__).parent / "fixtures" / "fake_yt_dlp.py"
+
+
+def install_fake_ytdlp(folder: Path, *, media: Path | None = None) -> dict[str, str]:
+    """Put the test stand-in for yt-dlp (``fixtures/fake_yt_dlp.py``) into ``folder``.
+
+    Returns the environment variables that make KaraForge use it; set them with
+    ``monkeypatch.setenv``.  ``FAKE_YTDLP_LOG`` names the file that collects its command lines.
+    """
+    import sys
+
+    folder.mkdir(parents=True, exist_ok=True)
+    launcher = folder / "yt-dlp"
+    launcher.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE_YTDLP}" "$@"\n')
+    launcher.chmod(0o755)
+    variables = {"KARAFORGE_YTDLP": str(launcher), "FAKE_YTDLP_LOG": str(folder / "calls.jsonl")}
+    if media is not None:
+        variables["FAKE_YTDLP_MEDIA"] = str(media)
+    return variables

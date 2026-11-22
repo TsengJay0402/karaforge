@@ -3,6 +3,9 @@
 Processing a song keeps every core busy, so running two jobs at once would only make both
 slower.  Jobs are therefore queued; each can be cancelled while it waits or while it runs
 (the engine checks the cancellation token between and inside stages).
+
+Downloading a video from a link mostly waits for the network, so those jobs have a queue and
+a worker of their own: a download does not wait for another song to finish processing.
 """
 
 from __future__ import annotations
@@ -23,8 +26,10 @@ from karaforge.runtime import CancelToken
 from karaforge.server.events import EventBus
 
 JobState = Literal["queued", "running", "done", "failed", "cancelled"]
-JobKind = Literal["process", "align", "export", "models"]
+JobKind = Literal["process", "align", "export", "models", "import"]
 FINISHED: tuple[JobState, ...] = ("done", "failed", "cancelled")
+_LANES: dict[str, str] = {"import": "network"}
+"""Kinds of job that run beside the others, one at a time among themselves."""
 _PROGRESS_INTERVAL_S = 0.15
 _KEEP_FINISHED = 100
 log = logging.getLogger("karaforge.server.jobs")
@@ -87,9 +92,16 @@ class JobManager:
         self._runner = runner
         self._lock = threading.Lock()
         self._jobs: dict[str, Job] = {}
-        self._queue: queue.Queue[str | None] = queue.Queue()
-        self._worker = threading.Thread(target=self._work, name="kf-jobs", daemon=True)
-        self._worker.start()
+        self._queues: dict[str, queue.Queue[str | None]] = {}
+        self._workers: list[threading.Thread] = []
+        for lane in ("main", *sorted(set(_LANES.values()))):
+            waiting: queue.Queue[str | None] = queue.Queue()
+            worker = threading.Thread(
+                target=self._work, args=(waiting,), name=f"kf-jobs-{lane}", daemon=True
+            )
+            self._queues[lane] = waiting
+            self._workers.append(worker)
+            worker.start()
 
     # ------------------------------------------------------------------ public API
 
@@ -100,7 +112,7 @@ class JobManager:
             self._jobs[job.id] = job
             self._forget_old()
         self._announce(job)
-        self._queue.put(job.id)
+        self._queues[_LANES.get(kind, "main")].put(job.id)
         return job
 
     def get(self, job_id: str) -> Job | None:
@@ -145,12 +157,14 @@ class JobManager:
         return job
 
     def shutdown(self) -> None:
-        """Cancel everything and stop the worker thread."""
+        """Cancel everything and stop the worker threads."""
         for job in self.list():
             if job.state not in FINISHED:
                 job.cancel.cancel()
-        self._queue.put(None)
-        self._worker.join(timeout=10)
+        for waiting in self._queues.values():
+            waiting.put(None)
+        for worker in self._workers:
+            worker.join(timeout=10)
 
     # --------------------------------------------------------------------- internals
 
@@ -163,9 +177,9 @@ class JobManager:
     def _announce(self, job: Job) -> None:
         self._bus.publish({"type": "job", "job": job.to_dict()})
 
-    def _work(self) -> None:
+    def _work(self, waiting: queue.Queue[str | None]) -> None:
         while True:
-            job_id = self._queue.get()
+            job_id = waiting.get()
             if job_id is None:
                 return
             job = self.get(job_id)

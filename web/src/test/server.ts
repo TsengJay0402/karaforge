@@ -19,6 +19,7 @@ export const system: SystemInfo = {
   ],
   device: { kind: 'cpu', name: 'CPU', fallback_reason_zh: null, fallback_reason_en: null },
   ffmpeg: { found: true, version: '7.1', libass: true, error: null },
+  ytdlp: { found: true, version: '2026.10.26' },
   qwen: false,
   formats: [
     { id: 'mp4', suffix: '.mp4', video: true, title_zh: 'MP4 影片', title_en: 'MP4 video' },
